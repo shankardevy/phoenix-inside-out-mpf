@@ -1,0 +1,51 @@
+== IEx
+
+As part of the Elixir installation, we also get the `iex` binary installed on our system. IEx provides a language shell that is useful to run small pieces of Elixir code in an interactive way. This makes it a suitable platform to learn the language.
+Since it's already installed on our system, we simply need to type `iex` on our terminal to start it.
+
+----
+→ iex
+Erlang/OTP 19 [erts-8.2] [source] [64-bit] [smp:4:4] [async-threads:10] [hipe] [kernel-poll:false] [dtrace]
+
+Interactive Elixir (1.4.0) - press Ctrl+C to exit (type h() ENTER for help)
+iex(1)>
+----
+
+When we run `iex` we will see output as above in our terminal with the information about the Elixir and Erlang versions that we have installed. We then end up with an IEx prompt `iex(1)>`. The numeral inside the parenthesis is the line number.
+Here we are at the first line of our language shell and we can start typing in Elixir code right away.
+
+Let's start with something very simple.
+Type in the statement "1 + 1" and press the "Return / Enter" key.
+The IEx shell replies back after processing your input.
+
+----
+iex(1)> 1 + 1
+2
+iex(2)>
+----
+
+Use `iex` as your calculator and try various arithmetic operations
+
+----
+iex(1)> 1 + 1
+2
+iex(2)> 1 - 1
+0
+iex(3)> 2 * 5
+10
+iex(4)> 9 / 3
+3.0
+iex(5)>
+----
+
+In each of the above commands, `iex` processes our input and prints the output immediately. Inputs can also span multiple lines as shown below:
+
+----
+iex(5)> 1 +
+...(5)> 2 +
+...(5)> 3.5 +
+...(5)> 4.4
+10.9
+----
+
+In the example above, notice that the line number is (5) for the four lines of code. When `iex` finds an incomplete Elixir expression, it waits until the expression is complete before starting to process it. In the above case, the first line `1 +` is an incomplete elixir expression. `Iex` needs a number on the right side of `+` to make it complete so it waits for the second line of input. But again the second line ends with an incomplete expression so it waits for third line and so on.

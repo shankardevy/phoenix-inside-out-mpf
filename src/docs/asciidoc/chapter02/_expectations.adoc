@@ -1,0 +1,112 @@
+== Setting the right expectations
+
+The fact that you are holding this book already shows you are interested in learning Phoenix and Elixir and that I don't have to convince you to learn either.
+However, when I started learning Phoenix, I became tired of a few things and began to question if the framework would really be productive for me and/or work as claimed:
+
+> A productive web framework that does not compromise speed and maintainability.
+
+In fact, as I realized later, the issue I was facing was not with the framework. It was a question of mindset and a need to accept these three principles:
+
+* Elixir is functional. Don't expect OOP features.
+* Explicit is better than implicit. Don't hide the intent to save a few keystrokes.
+* There is a need to retune visual scanning of code. The code is not difficult to read. It's just that you are not used to this pattern of code.
+
+
+This short section is to set the right kind of expectations when approaching a Phoenix project. This is especially important if you are coming from an OOP background like Ruby and Ruby on Rails.
+
+=== Elixir is functional
+
+For those coming from OOP background, remember that Elixir is a functional programming language and you cannot expect things like
+
+[source,ruby]
+----
+ user = User.create("user@example.com")
+ user.send_confirmation_email
+----
+
+Instead, you will normally find something like below:
+
+[source,elixir]
+----
+ user = User.create_user("user@example.com")
+ User.send_confirmation_email(user)
+----
+
+When I first looked at this code, my immediate reaction was why should I type `User` twice? Why can't I call the `send_confirmation_email` method on the `user` object?
+
+As a functional programming language Elixir doesn't have objects which are a mixture of data and behavior. In Elixir, you have to keep the data and the functions separate and there is no way data can come with a set of related functions.
+
+So in the Elixir code above, `User` is a module, a namespace, which holds the user related functions. The function `send_confirmation_email` is created inside this module because it does something related to a user. However, it doesn't have information about the specific user to whom it will send the email. This information has to be supplied at the time the function is called.
+
+So when we say, Elixir is functional and that there are no objects, what we are effectively saying is that you can't do `"hello world".length` in Elixir i.e., you can't encapsulate data and the actions that can be executed on that data into a single object. In Elixir, data and functions live separately but go well together.
+
+=== Explicit is better than implicit
+
+If you are coming from Ruby on Rails, do expect to type more than you are used to in your Rails project.
+Things are verbose in Elixir and consequently in Phoenix. Explicitness is encouraged and valued.
+
+Take for example the simple `index` action of the `PageController` that we saw in the previous chapter.
+
+[source,elixir]
+----
+def index(conn, _params) do
+  render conn, "index.html"
+end
+----
+
+If the same code is written in Ruby on Rails, it would be
+[source,ruby]
+----
+def index
+end
+----
+
+Comparing both versions, the Phoenix version is explicit. The index action of Phoenix explicitly says that
+
+* the function gets `conn` as the first argument and that it needs this value for returning the output.
+* the function doesn't need the second argument and marks it so by prefixing the argument name with `_`
+* the function renders a template by name `index.html`
+
+While it's more typing than its Rails counterpart, the above information is more valuable because its meaning is clear at a glance.
+
+=== Tune your visual
+
+Because of language features such as pattern matching and pipe operators and because the framework values explicitness, you need to recalibrate your eyes to scan through the code easily.
+Here is a simple controller action for updating a cart in an ecommerce site.
+If you are not used to pattern matching and pipe operators, this code might look complex.
+
+[source,elixir]
+----
+def update(conn, %{"order" => cart_params}) do
+  cart = conn.assigns.cart
+  case Sales.update_cart(cart, cart_params) do
+    {:ok, cart} ->
+      conn
+      |> put_flash(:info, "Cart updated successfully")
+      |> redirect(to: cart_path(conn, :show))
+
+    {:error, %Ecto.Changeset{} = changeset} ->
+      conn
+      |> put_flash(:info, "Error updating cart")
+      |> redirect(to: cart_path(conn, :show))
+  end
+end
+----
+
+However, it's only a matter of practice and time before you will fall in love with writing and reading code like this.
+
+Being able to easily and confidently scan through a piece of code is an important measure of expertise. So how do you get this visual familiarity? Read through various open source Elixir code and practice. There is no shortcut ;-)
+
+
+=== Benefits
+
+I hope I didn't scare you away from learning Phoenix.
+My intention is to give you informed expectations in order to: help you learn Phoenix, appreciate things as they are, and to prevent you from struggling with an expectation-reality mismatch.
+
+My wife is a Mammogram technician.
+She once shared with me something she learned from her experience with patients.
+Most people who undergo a mammogram procedure experience a significant amount of pain and many are not co-operative with the technician during the process.
+However, when my wife started explaining to patients what kind of pain they might experience during the procedure, reassuring them that it's normal, and instructing them on the benefits they get in diagnosing medical illness, she started noticing something different. The patients are now more co-operative during the procedure and even _experience_ less pain.
+
+Learning a new language or framework works exactly the same way.
+The moment we face difficulty without being informed ahead of time we start to struggle, we get frustrated, and problems become more acute. But if we know what we face up front, then we "experience" the pain less, move forward earlier, and start seeing benefits sooner.

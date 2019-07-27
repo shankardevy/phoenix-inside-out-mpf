@@ -1,0 +1,253 @@
+
+== Processing Checkout
+
+[sidebar]
+.User Story #11
+--
+*As a customer, I want to checkout.*
+
+Specifications:
+
+. During checkout the customer may enter comments on the order.
+. The following customer details will be collected and store in the order.
+.. Customer name
+.. Email
+.. Residence area
+. Show a confirmation message to the customer once the order is confirmed.
+--
+
+
+=== Preparing the Datastore and Schema
+
+Our order table doesn't have fields for storing order comments or customer related information.
+
+Let's add these fields to our existing order table through a database migration.
+
+
+Run `mix ecto.gen.migration add_checkout_fields_to_orders`
+
+Open the new migration file and add the following database changes.
+
+.priv/repo/migrations/**_add_checkout_fields_to_orders.exs https://gist.github.com/shankardevy/56a1b7915522401f40e2e77890c0ea97[Link]
+```elixir
+defmodule Mango.Repo.Migrations.AddCheckoutFieldsToOrders do
+  use Ecto.Migration
+
+  def change do
+    alter table(:orders) do
+      add :comments, :text
+      add :customer_id, references(:customers)
+      add :customer_name, :string
+      add :email, :string
+      add :residence_area, :string
+    end
+
+    create index(:orders, [:customer_id])
+  end
+end
+```
+
+Now run `mix ecto.migrate` to execute the database changes.
+
+We also need to modify
+
+. The Order schema to add these new fields
+. The changeset function to allows these new values to be stored in the database.
+
+.lib/mango/sales/order.ex https://gist.github.com/shankardevy/9a43b681503fb56effa500e1ed2f9277[Link]
+```elixir
+defmodule Mango.Sales.Order do
+  (...)
+  schema "orders" do
+    embeds_many :line_items, LineItem, on_replace: :delete
+    field :status, :string
+    field :total, :decimal
+    # --> newly added from here
+    field :comments, :string
+    field :customer_id, :integer
+    field :customer_name, :string
+    field :email, :string
+    field :residence_area, :string
+    # <-- upto here
+
+    timestamps()
+  end
+  (...)
+end
+```
+
+The changeset function needs to be modified to allow newly added fields in `cast`. However, we cannot change the existing changeset because doing so will cause a regression --
+none of our cart features will work because at the time of adding products or updating the cart, we don't have any details about either the customer or the order comments.
+
+The goal here is to use a new changeset while at the same time avoiding code duplication.
+
+.Existing Changeset in `Mango.Sales.Order`
+```elixir
+def changeset(%Order{} = order, attrs) do
+  order
+  |> cast(attrs, [:status, :total])
+  |> cast_embed(:line_items, required: true, with: &LineItem.changeset/2)
+  |> set_order_total
+  |> validate_required([:line_items, :status, :total])
+end
+```
+
+.New Changeset in `Mango.Sales.Order` Reusing the Existing Changeset.
+```elixir
+def checkout_changeset(%Order{} = order, attrs) do
+  changeset(order, attrs) <1>
+  |> cast(attrs, [:customer_id, :customer_name, :residence_area, :email, :comments])
+  |> validate_required([:customer_id, :customer_name, :residence_area, :email])
+end
+```
+<1> We make use of the existing changeset/2 function and chain in additional validation for the new fields.
+
+https://gist.github.com/shankardevy/8455a36b99a33b7a8daa77e407748091[View Gist of complete changes to `order.ex`]
+
+
+=== Preparing the Router
+
+We need two routes for performing the above actions:
+
+* first to show the checkout form.
+* second to process the checkout submission.
+
+We already have the first route created and the template just needs to be modified to show the checkout form.
+
+We will add the second route to our `router.ex` inside the authenticated scope.
+
+.lib/mango_web/router.ex https://gist.github.com/shankardevy/9092be597c0ae85c613d0e93a93f1d6e#file-router-ex-L44[Link]
+```elixir
+put "/checkout/confirm", CheckoutController, :update
+```
+
+=== Checkout Page Form
+
+The checkout page is similar to the "Cart update" page in the sense in that, we are going to show the cart contents but not allow the customer to edit them. Additionally we are going to show a comment field for the customer to enter any order comments.
+
+Modify the CheckoutController as shown below to pass the `order` and `order_changeset` value to the template.
+
+.lib/mango_web/controllers/checkout_controller.ex https://gist.github.com/shankardevy/6ca01040ec7e6099da7b31191bcd6bd5[Link]
+```elixir
+defmodule MangoWeb.CheckoutController do
+  use MangoWeb, :controller
+  alias Mango.Sales
+
+  def edit(conn, _params) do
+    order = conn.assigns.cart
+    order_changeset = Sales.change_cart(order)
+    render conn, "edit.html",
+           order: order,
+           order_changeset: order_changeset,
+  end
+
+end
+```
+
+In the template file add the following code to show an HTML form with an option to add comments.
+
+.lib/mango_web/templates/checkout/edit.html.eex https://gist.github.com/shankardevy/a74b8387c3999b87900b67b02112298e[Link]
+```html
+<%= form_for @order_changeset, checkout_path(@conn, :update), fn f -> %>
+<div class="row">
+  <div class="col-md-6 col-md-offset-3">
+    <h2>Order Summary</h2>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Product name</th>
+          <th>Pack size</th>
+          <th class="text-right">Quantity</th>
+          <th class="text-right">Subtotal</th>
+        </tr>
+      </thead>
+      <tbody>
+      <%= for {item, i} <- Enum.with_index(@order.line_items, 1) do %>
+        <tr>
+          <td><%= i %></td>
+          <td><%= item.product_name %></td>
+          <td><%= item.pack_size %></td>
+          <td class="text-right"><%= item.quantity %></td>
+          <td class="text-right">INR <%= item.total %></td>
+        </tr>
+      <% end %>
+      <tr>
+        <td colspan=4 class="text-right">Total</td>
+        <td class="text-right">INR <%= @order.total %></td>
+      </tr>
+      </tbody>
+    </table>
+
+    <div class="form-group">  <1>
+      <%= label f, :comments, class: "control-label" %>
+      <%= textarea f, :comments, class: "form-control" %>
+      <%= error_tag f, :comments %>
+    </div>
+
+    <div class="form-group float-right">
+      <%= submit "Confirm", class: "btn btn-primary" %>
+    </div>
+  </div>
+</div>
+<% end %>
+```
+<1> Add the comments field for the order.
+
+The above form template is similar to the form template of the Cart update page, with the addition of the `comments` field. The form submission is sent back to the `update` action of CheckoutController. Let's create it now.
+
+Edit the CheckoutController modifying it as shown below.
+
+.lib/mango_web/controllers/checkout_controller.ex https://gist.github.com/shankardevy/2728e1c08677bd62b034a8e1cc0175b6[Link]
+```elixir
+defmodule MangoWeb.CheckoutController do
+  use MangoWeb, :controller
+  alias Mango.Sales
+
+  (...)
+  def update(conn, %{"order" => order_params}) do
+    order = conn.assigns.cart
+    order_params = associate_user_from_session(conn, order_params) <1>
+    case Sales.confirm_order(order, order_params) do
+      {:ok, _} ->
+        conn
+        |> put_flash(:info, "Your order has been confirmed.")
+        |> redirect(to: "/")
+      {:error, order_changeset} ->
+        render conn, "edit.html", order: order, order_changeset: order_changeset
+    end
+  end
+
+  def associate_user_from_session(conn, params) do
+    customer = conn.assigns.current_customer
+    params
+    |> Map.put("customer_id", customer.id)
+    |> Map.put("customer_name", customer.name)
+    |> Map.put("residence_area", customer.residence_area)
+    |> Map.put("email", customer.email)
+  end
+end
+```
+<1> The order params from the form submission doesn't contain the customer details needed for completing the order. We define a new function `associate_user_from_session` to add these missing customer details to order params.
+
+We have the current customer information in the `conn` struct. With the helper function `associate_user_from_session`, we are merging this customer data into the `order_params`.
+
+.Map.put/3
+****
+`Map.put/3` takes 3 arguments. Open IEx and type in `h Map.put` to read documentation for `Map.put/3`. Basically, it takes a map, a key, and a value to be set on the key in the given map.
+
+In the code above, we update the map `params` by setting the value of `"customer_id"` to `customer.id`. We then pass the updated map to the next `Map.put/3` which adds another key `"customer_name"` and so on until we have all the customer related information in the `params` map.
+****
+
+Finally let's create `Sales.confirm_order` to complete the checkout process. Open `sales.ex` and add the following code.
+
+.lib/mango/sales/sales.ex https://gist.github.com/shankardevy/c4486721fe3627ba1c37aab870f1b081#file-sales-ex-L40-L45[Link]
+```elixir
+def confirm_order(%Order{} = order, attrs) do
+  attrs = Map.put(attrs, "status", "Confirmed")
+  order
+  |> Order.checkout_changeset(attrs) <1>
+  |> Repo.update()
+end
+```
+<1> We make use of the new changeset that we have created with additional validation.

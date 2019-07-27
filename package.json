@@ -1,0 +1,12 @@
+{
+  "name": "pio-mastering-phoenix-framework",
+  "description": "Mastering Phoenix Framework",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com/shankardevy/mastering-phoenix-framework.git"
+  },
+  "devDependencies": {
+    "gulp": "3.9.1",
+    "browser-sync": "2.15.0"
+  }
+}

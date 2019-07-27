@@ -1,0 +1,15 @@
+= Product catalog
+
+include::_iteration_planning.adoc[]
+
+include::_seasonal.adoc[]
+
+include::_categorized_products.adoc[]
+
+include::_add_ecto.adoc[]
+
+include::_seed_data.adoc[]
+
+include::_tidy_up.adoc[]
+
+include::_summary.adoc[]

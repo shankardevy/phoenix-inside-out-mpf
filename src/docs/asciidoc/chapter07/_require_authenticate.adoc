@@ -1,0 +1,173 @@
+== Require authenticated customer
+
+
+[sidebar]
+.User Story #10
+--
+*As an anonymous user, I should be redirected to the login page during checkout.*
+
+Specifications:
+
+. A checkout link will be present on `/cart` page.
+. If the customer is not logged in, redirect the user to the login page when the `checkout` link is clicked.
+. On successful login, redirect the user back to checkout page.
+. On successful login, reuse the same cart information created before the user was redirected to completed the login.
+--
+
+Let's add a new route for checkout and add a checkout link on the cart page.
+
+Since we know the process needed to create a page, we will go through it quickly.
+
+Add a route in `mango_web/router.ex` for the checkout page as shown below:
+
+
+.lib/mango_web/router.ex https://gist.github.com/shankardevy/ddcfbeceb63d1ecf438246f3d769bd5a#file-router-ex-L31[Link]
+```elixir
+get "/checkout", CheckoutController, :edit
+```
+
+Add a link to checkout on the cart page. Modify the template `cart/show.html.eex` and add the link as shown below:
+
+.lib/mango_web/templates/cart/show.html.eex https://gist.github.com/shankardevy/1e2859dde71c3c05135172fa5b772684#file-show-html-eex-L42-L43[Link]
+```elixir
+  <%= if Enum.empty?(@cart.line_items) do %>
+    <p><%= Your cart is empty %></p>
+  <% else %>
+    ...
+    <%= link "Checkout", to: checkout_path(@conn, :edit), class: "btn btn-primary pull-right " %>
+  <% end %>
+```
+
+Now create a controller, view and template as shown below:
+
+.lib/mango_web/controllers/checkout_controller.ex https://gist.github.com/shankardevy/7eb524b98981c486d4e05b482c085580[Link]
+```elixir
+defmodule MangoWeb.CheckoutController do
+  use MangoWeb, :controller
+
+  def edit(conn, _params) do
+    render conn, "edit.html"
+  end
+end
+```
+
+.lib/mango_web/views/checkout_view.ex https://gist.github.com/shankardevy/8278759214b604242d223abd5f6f1e67[Link]
+```elixir
+defmodule MangoWeb.CheckoutView do
+  use MangoWeb, :view
+end
+```
+
+.lib/mango_web/templates/checkout/edit.html.eex
+```html
+<h1>Checkout</h1>
+```
+
+With the previous setup complete, we should now be able to access http://localhost:4000/checkout irrespective of the customers' authentication status. Our job now is to make sure that the checkout page is accessible only for signed in users. If someone tries to visit this page without signing in they should be redirected to the login page.
+
+Before we work on that, let's refactor our `router.ex` file as indicated below:
+
+```elixir
+  pipeline :frontend do
+    # Add plugs related to frontend
+  end
+
+  # Unauthenticated scope
+  scope "/", MangoWeb do
+    pipe_through [:browser, :frontend]
+    # Add all routes for unauthenticated users
+  end
+
+  # Authenticated scope
+  scope "/", MangoWeb do
+    pipe_through [:browser, :frontend, MangoWeb.Plugs.AuthenticateCustomer]
+    # Add routes that require authentication
+  end
+```
+
+Starting with the pipeline, we will move our existing plugs into a new pipeline called `:frontend`. The idea here is that we leave the default `:browser` pipeline untouched and restrict it to the default list of Plugs that are required for any browser request. We create a new `:frontend` pipeline to which we add our application specific plugs.
+
+```elixir
+pipeline :frontend  do
+  plug MangoWeb.Plugs.LoadCustomer
+  plug MangoWeb.Plugs.FetchCart
+end
+```
+
+Later in this book, we will add a pipeline called `backend` which contains the Plugs for the admin dashboard. So we are already working towards a clear separation of Plugs based on their usage.
+
+So far we have all the routes under a single `scope do...end` block. A scope block helps us to group a set of routes that can be passed through a common pipeline. We will now create two `scope` blocks, one for all routes that don't require authentication and another for routes that require authentication.
+
+.Router scope for unauthenticated access
+```elixir
+scope "/", MangoWeb do
+  pipe_through [:browser, :frontend] <1>
+
+  # Add all routes that don't require authentication
+  get "/login", SessionController, :new
+  post "/login", SessionController, :create
+  get "/register", RegistrationController, :new
+  post "/register", RegistrationController, :create
+
+  get "/", PageController, :index
+  get "/categories/:name", CategoryController, :show
+
+  get "/cart", CartController, :show
+  post "/cart", CartController, :add
+  patch "/cart", CartController, :update
+  put "/cart", CartController, :update
+end
+```
+<1> Note that we are using the new `frontend` pipeline, in addition to the `browser` pipeline.
+
+
+.Router scope for authenticated access
+```elixir
+scope "/", MangoWeb do
+  pipe_through [:browser, :frontend, Mango.Plugs.AuthenticateCustomer] <1>
+
+  # Add all routes that do require authentication
+  get "/logout", SessionController, :delete
+  get "/checkout", CheckoutController, :edit
+end
+```
+<1> We are again passing through the `browser` and `frontend` pipelines. Additionally, we are passing in a new plug `Mango.Plugs.AuthenticateCustomer` to authenticate customers. This plug will allow access to the URLs inside this scope only to logged in customers. Hence we can add all routes that require authentication in this scope.
+
+https://gist.github.com/shankardevy/5672a5aece779878b72faafe596ae724[See Gist of refactored `router.ex`]
+
+With this refactoring in place, we can go ahead and write our new plug `AuthenticateCustomer` that we used in the router.
+
+== Writing Authentication Plug
+The logic behind the authentication plug is simple. We will check if the `current_customer` value is present in the conn. Since this plug is run after the `LoadCustomer` plug, we will have the `current_customer` value in the `conn` struct if the user is logged in. If the `current_customer` value is present, our new plug will just happily return the given conn without doing any work. If the value for `current_customer` is not present, it will redirect the user to the login page and simply halt the plug pipeline preventing other plugs from executing.
+
+
+.lib/mango_web/plugs/authenticate_customer.ex https://gist.github.com/shankardevy/1e865aae9f4ae0a3926ccb0e9e2af692[Link]
+```elixir
+defmodule MangoWeb.Plugs.AuthenticateCustomer do
+  import Plug.Conn
+  import Phoenix.Controller, only: [redirect: 2, put_flash: 3]
+
+  def init(_opts), do: nil
+
+  def call(conn, _opts) do
+    case conn.assigns[:current_customer] do
+      nil -> <1>
+         conn
+         |> put_flash(:info, "You must be signed in")
+         |> redirect(to: "/login")
+         |> halt
+      _ -> <2>
+         conn
+    end
+  end
+end
+```
+<1> Redirect to `/login` if the customer data is not present in `conn`
+<2> Just return `conn` without doing any work if the customer data is present.
+
+Now, if we try to visit `/checkout` without signing in we will be redirected to the `/login` page with the message "You must be signed in".
+
+.import
+****
+In the plug module defined above, we use two functions from Phoenix.Controller module. Instead of importing all the functions in the current scope by using `import Phoenix.Controller`, we are passing on a keyword list `[only: list_of_functions_to_import]`. The list of functions to be imported are given in the format `[function_name: :arity]`.
+****

@@ -1,0 +1,13 @@
+== Exercises
+
+We have already seen how to get customer data from the session data and load it in the `conn` struct. We did this with the `LoadCustomer` plug module. We also saw how to enforce user validation before cart checkout.  Again, we did this with a module plug `AuthenticateCustomer` which redirects user to the homepage if not signed in. We also implemented a logout feature which simply meant clearing the session data.
+
+We have exactly the same requirements again but this time for the admin dashboard. So go ahead and complete the following exercises. You can model your solution on the customer plugs that we have already created. There are also other exercises for displaying the list of customers and orders. These features again can be implemented using the knowledge we have gained in developing the frontend.
+
+. Create and use a `LoadAdmin` module plug so that admin user details are loaded in the `conn` struct.
+. Create and use an `AuthenticateAdmin` to ensure that all paths under `/admin` are only accessible by admin users.
+. Implement a logout feature for Admin dashboard.
+. Implement an `admin/orders` path which lists all orders from the store and implement an `admin/orders/:id` which displays a single order.
+. Implement an `admin/customers` path which lists all customers from the store and implement an `admin/customers/:id` which displays a single customer information.
+
+Solutions for all these exercises are included in Mango source code in GitHub.

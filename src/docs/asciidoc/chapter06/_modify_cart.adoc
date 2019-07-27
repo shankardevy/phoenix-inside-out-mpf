@@ -1,0 +1,235 @@
+== Update cart
+
+[sidebar]
+.User Story #8
+--
+*As a customer, I want to update my cart.*
+
+Specifications:
+
+When viewing the cart, the user can
+
+* change quantities ordered.
+* remove a product from the cart.
+--
+
+Since the user updates the cart from the cart's show page, let's start working from there. Right now when we view a cart page, we only see a tabular listing of the cart's contents.
+The change that we need in the cart's show page is to display a form for updating the order. We will retain the existing table structure showing the cart contents but we will insert form fields to update line item quantities and to remove individual line items.
+
+.lib/mango_web/templates/cart/show.html.eex https://gist.github.com/shankardevy/46ff53aa23d48c62da957e950ce309ec[Link]
+```elixir
+<h1>Cart</h1>
+<%= if Enum.empty?(@cart.line_items) do %>
+  <p>Your cart is empty</p>
+<% else %>
+  <%= form_for @cart_changeset, "/cart", fn f -> %> <1>
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Product name</th>
+          <th>Pack size</th>
+          <th>Quantity</th>
+          <th>Unit price</th>
+          <th>Subtotal</th>
+          <td>Remove?</td>
+        </tr>
+      </thead>
+      <tbody>
+      <%= inputs_for f, :line_items, fn lf -> %>   <2>
+        <tr>
+          <td><%= lf.data.product_name %></td>
+          <td><%= lf.data.pack_size %></td>
+          <td>
+            <%= hidden_input lf, :product_id %>
+            <%= number_input lf, :quantity %>
+            <%= error_tag lf, :quantity %>
+          </td>
+          <td>INR <%= lf.data.unit_price %></td>
+          <td>INR <%= lf.data.total %></td>
+          <td><%= checkbox lf, :delete %></td>
+        </tr>
+      <% end %>
+      <tr>
+        <td colspan=4>Total</td>
+        <td>INR <%= @cart.total %></td>
+        <td></td>
+      </tr>
+      </tbody>
+    </table>
+    <div class="form-group">
+      <%= submit "Update Cart", class: "btn btn-primary" %>
+    </div>
+  <% end %>
+<% end %>
+```
+<1> We wrap the entire table content inside a `form_for` element.
+<2> Instead of looping through `@cart.line_items` which is a simple list, we use the `inputs_for` form helper, which again loops but this time creating a form struct for each value in the list.
+
+
+The main change between the previous code and the current one is the code for printing the line items.
+
+.This is the previous code
+```elixir
+<%= for item <-  @cart.line_items do -> %>
+  <tr>
+    <td><%= item.product_name %></td>
+    <td><%= item.pack_size %></td>
+    <td><%= item.quantity %></td>
+    <td>INR <%= item.unit_price %></td>
+    <td>INR <%= item.total %></td>
+  </tr>
+<% end %>
+```
+
+.We changed it to
+```elixir
+<%= inputs_for f, :line_items, fn lf -> %>
+  <tr>
+    <td><%= lf.data.product_name %></td>
+    <td><%= lf.data.pack_size %></td>
+    <td>
+      <%= hidden_input lf, :product_id %>
+      <%= number_input lf, :quantity %>
+    </td>
+    <td>INR <%= lf.data.unit_price %></td>
+    <td>INR <%= lf.data.total %></td>
+    <td><%= checkbox lf, :delete %></td>
+  </tr>
+<% end %>
+```
+
+Within the `input_for` block, `lf` represents the form struct for each line item and it's used to generate the form fields. If we want to access the plain line item struct, we can access it by `lf.data`.
+We make use of `lf` for creating input fields and use `lf.data` for directly printing the line item data.
+
+Additionally, we also show a checkbox to allow users to remove a product from the cart.
+
+Our template makes use of `@cart_changeset` but it's not yet in our `CartController`. Open `cart_controller.ex` file and modify the `show` action
+
+.lib/mango_web/controllers/cart_controller.ex https://gist.github.com/shankardevy/9ba3e16d4875a6faf02a50a04eb69bf8[Link]
+```elixir
+def show(conn, _params) do
+  cart = conn.assigns.cart
+  cart_changeset = Sales.change_cart(cart) <1>
+  render conn, "show.html", cart: cart, cart_changeset: cart_changeset <2>
+end
+```
+<1> Create a cart changeset
+<2> Pass the cart changeset to template.
+
+The function `Sales.change_cart/1` doesn't exist yet. Let's create it now. Open `lib/mango/sales/sales.ex` file and add the new function.
+
+.lib/mango/sales/sales.ex https://gist.github.com/shankardevy/ef76ee05ba334b265a401b83baa0b720#file-sales-ex-L36-L38[Link]
+```elixir
+def change_cart(%Order{} = order) do
+  Order.changeset(order, %{})
+end
+```
+
+Now we have modified the cart show page to display the cart contents within an HTML form. The form however is not working yet. We need a new route to handle the form submission.
+
+Open `router.ex` file and add this new route
+
+.lib/mango_web/router.ex https://gist.github.com/shankardevy/ed513780139369991bd65544ceef12dd#file-router-ex-L30[Link]
+```elixir
+put "/cart", CartController, :update
+```
+
+Open up `cart_controller.ex` to add the `update` action.
+
+.lib/mango_web/controllers/cart_controller.ex https://gist.github.com/shankardevy/b71d531066032d1edb0eb02d83b25ba2#file-cart_controller-ex-L28-L40[Link]
+```elixir
+def update(conn, %{"order" => cart_params}) do
+  cart = conn.assigns.cart
+  case Sales.update_cart(cart, cart_params) do
+    {:ok, _} ->
+      conn
+      |> put_flash(:info, "Cart updated successfully")
+      |> redirect(to: cart_path(conn, :show))
+    {:error, _} ->
+      conn
+      |> put_flash(:info, "Error updating cart")
+      |> redirect(to: cart_path(conn, :show))
+  end
+end
+```
+
+// The function `Sales.update_cart` doesn't exist yet. However, since the `add_to_cart` function did much of the heavy lifting of configuring changesets in both `Order` and `LineItem` schema, `Sales.update_cart/2` is going to be much easier to implementation.
+// Add the following function in `lib/mango/sales/sales.ex` file.
+//
+// ```elixir
+// def update_cart(cart, attrs) do
+//   cart
+//   |> Order.changeset(attrs)
+//   |> Repo.update
+// end
+// ```
+
+Try updating the cart contents and it should now work except for removing the products from the cart.
+Selecting the checkbox seems to have no effect on the cart items. That's because our LineItem changeset doesn't use it yet.
+
+Open `lib/mango/sales/line_item.ex` and change as below
+
+```elixir
+def changeset(%LineItem{} = line_item, attrs) do
+  line_item
+  |> cast(attrs, [:product_id, :product_name, :pack_size, :quantity, :unit_price, :total, :delete]) <1>
+  |> set_product_details
+  |> set_total
+  |> validate_required([:product_id, :product_name, :pack_size, :quantity, :unit_price])
+end
+```
+<1> Add `:delete` to the list of allowed items in the cast.
+
+However, we can only allow fields that are present in the `LineItem` struct. `:delete` is not a valid field on the `LineItem` struct.
+We can overcome this by declaring `:delete` as a virtual field on `LineItem`, which means the value for `:delete` doesn't get stored in the database but we can still set a value for it.
+
+```elixir
+defmodule Mango.Sales.LineItem do
+  (...)
+  embedded_schema do
+    (...)
+    field :delete, :boolean, virtual: true <1>
+  end
+
+  (...)
+end
+```
+<1> Add `:delete` as a virtual field.
+
+We will now make use of this new virtual attribute to determine if the line item has to be deleted or not. When the user selects the checkbox to remove an item from the cart, it changes the `delete` value of the line_item to `true`.
+This `delete` attribute on the `LineItem` is not anything special. Infact, it can be named anything we want. What matters is that we set the `:action` value of the line item changeset to `:delete`.
+
+.Changeset action
+****
+The `:action` field is present in `Ecto.Changeset` struct and is not part of the `LineItem` struct in our application. Ecto uses this information to decide if a record needs to be deleted. We get the user's choice to delete a line item using the virtual field `:delete` and we manually set the value of the `:action` field in our changeset as shown below.
+****
+
+Let's modify the changeset to set this `:action` attribute to `:delete` on the `LineItem` we want to delete.
+
+```elixir
+def changeset(%LineItem{} = line_item, attrs) do
+  line_item
+  |> cast(attrs, [:product_id, :product_name, :pack_size, :quantity, :unit_price, :total, :delete])
+  |> set_delete <1>
+  |> set_product_details
+  |> set_total
+  |> validate_required([:product_id, :product_name, :pack_size, :quantity, :unit_price])
+end
+```
+<1> Add this new function call.
+
+
+Create the private function `set_delete` which checks if the changeset for the line_item has a new value for `:delete`. Why aren't we checking if it's true? Since the field is virtual, it's not stored in the database. If the changeset shows this value has been changed, then it's surely marked for deletion.
+```elixir
+defp set_delete(changeset) do
+  if get_change(changeset, :delete) do
+    %{changeset| action: :delete}
+  else
+    changeset
+  end
+end
+```
+
+https://gist.github.com/shankardevy/feaf9803a06800d39095e75295ced762[See Gist of all changes made to `line_item.ex`]
+
+With this new addition, we now have a fully working update functionality for our cart. That's a lot less work than we did for `add_to_cart`!

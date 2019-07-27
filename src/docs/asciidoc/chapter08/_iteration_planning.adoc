@@ -1,0 +1,13 @@
+== Iteration Planning
+
+In this chapter we will tackle three user stories:
+
+. As a customer, I want to see my order history.
+. As a customer, I want to manage support tickets for my order.
+. As a customer, I want to browse the site in multiple languages.
+
+We have seen a few user stories where we created a router, a controller, a view and a template and displayed information queried from the database. For example, the cart page displays the list of items in the cart by loading the order information from the database. Viewing of an order history by a customer is just more of the same. We create a bunch of router-to-template transformation for displaying the list of orders and for viewing a single order. To keep the content in this book interesting and spend time on learning new and interesting stuff, this user story is given as an exercise for you to test your understanding to this point.
+
+So far we haven't used a CRUD generator for any of the user stories that we developed. CRUD generators have their place for simple user stories. However, it is difficult to comprehend why it's not suitable when developing a full fledged user story. Having trained people who come from a CRUD generator mindset to TDD, a simple exercise to demonstrate a case against CRUD generators and a case for CRUD generators is normally easier to understand, than a statement based on someone else's experience. The user story for managing support tickets is a case against CRUD generators explaining when and why you shouldn't use them. In the next chapter, we will look at a case in favor of CRUD generators to complement this topic and to be nice to CRUD generators for offending their sensitivities in this chapter ;-)
+
+Finally, we will look into implementing an interface language translation by using the Gettext library which is preconfigured with Phoenix. Internationalization in Phoenix is so simple that we can cover this in a single short chapter.

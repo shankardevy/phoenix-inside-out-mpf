@@ -1,0 +1,35 @@
+
+== My Orders
+
+[sidebar]
+.User Story #12
+--
+As a customer, I want to see my order history.
+--
+
+As explained earlier, this user story is an exercise for you to workout by yourself by applying the concepts learned so far. Specifications for this user story are given below:
+
+*Specifications*
+
+ . There should be a link "My Orders" on the nav bar under the user menu.
+ . Clicking on this "My Orders" link should take users to the `/orders` page which lists all orders for the currently logged in customer in an HTML table.
+ . The table should list the following details of each order:
+ .. Order ID
+ .. Status
+ .. Products Ordered
+ .. Total
+ . Each order should have a "View" link that takes users to `/orders/:id` to view the complete details of the order.
+ . If customers try to view an order that doesn't belong to them, then a `404` page should be returned.
+
+.404 or 403?
+****
+Technically, we could to return `403` for the last specification. However, I generally prefer to return a `404` response instead of `403` for the purpose of https://meta.stackexchange.com/questions/258756/what-is-the-reason-behind-marking-forbidden-pages-as-404[Security through obscurity].
+****
+
+
+
+*Exercise details*
+
+. Write acceptance tests for all the scenarios covered in the user story specification.
+. Write unit tests for all new functions written for the purpose of this user story.
+. Finally make all the tests pass by writing the actual implementation code.

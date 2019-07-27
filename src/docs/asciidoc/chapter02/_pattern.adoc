@@ -1,0 +1,106 @@
+== Pattern matching
+
+=== Pattern matching with `=` operator
+In most languages, when we say `a = 5` it means assign the value of `5` to the variable `a`. That is, the `=` is an assignment operator; it assigns the value on the right side to the variable on the left side of the operator.
+
+However, `=` sign in Elixir is not an assignment operator but a match operator. In Elixir, when we say `a = 5`, what we are asking is to match the value on the right side of the operator to the variable on the left side. In other words, set the value of `a` to match the value `5`. So, the value of `a` becomes `5` but this change is the result of matching a pattern. At this point, you might think it is same as assignment. That is because, we took a very simple example.
+Let's look at a few more examples.
+
+Open IEx to play with pattern matching.
+
+----
+iex(1)> list = [1,2,3]
+[1, 2, 3]
+iex(2)> list
+[1, 2, 3]
+----
+
+Nothing new so far.
+
+----
+iex(3)> [a, b, c] = [1, 2, 3] # On the left, we have a list of variables.
+[1, 2, 3]
+iex(4)> a                     # Magic
+1
+iex(5)> b                     # Magic
+2
+iex(6)> c                     # Magic
+3
+----
+
+What happened here? We haven't assigned any values to the variables `a`, `b` and `c` but Elixir matched the left side of the `=` operator containing a list of three variables to the right side of the operator containing a list of three values in a sequential order. Thereby the variables `a`, `b` & `c` get `1`, `2` & `3` values assigned.
+
+For the `=` operator to pattern match, items on both sides of the operator should be matchable. For example, if we ask Elixir to match `[a, b] = [1, 2, 3]`, it cannot, because the number of items in the list on both sides are not equal.
+
+We could either ask to match `a = [1, 2, 3]` in which case the entire list is assigned to `a` or we could give a list of `[a, b, c]` matching the items on the right.
+
+Pattern matching can be done for all kinds of data. Let's look at matching a map.
+
+[source,elixir]
+----
+iex(1)> user = %{name: "Nittin", sex: :male, interests: ["cooking", "programming"]}
+%{interests: ["cooking", "programming"], name: "Nittin", sex: :male}
+iex(2)> %{name: name, sex: sex, interests: interests} = user
+%{interests: ["cooking", "programming"], name: "Nittin", sex: :male}
+iex(3)> name
+"Nittin"
+iex(4)> sex
+:male
+iex(5)> interests
+["cooking", "programming"]
+iex(6)>
+----
+In line `iex(2)>` above, on the left side we have a new map with keys matching the keys of our `user` map. The `=` operator looks for matching keys on either side and assigns the value to the variables on the left side map corresponding to the value on the right side map.
+
+=== Ignore operator
+
+`_` (underscore) is the ignore operator in Elixir and goes hand-in-hand with pattern matching. Going back to the first example, what if we only wanted to know the second value of the list and not others?
+
+----
+iex(3)> [a, b, c] = [1, 2, 3]
+----
+
+We could rewrite the above to capture only the second value by using the `_` operator.
+
+----
+iex(3)> [_, b, _] = [1, 2, 3]
+----
+
+Because we only need the second value, we replaced the others with `_` which basically says "I need some value here but I don't care what it is".
+
+You can think of `_` operator as a variable which forgets its value immediately after it's assigned and goes back to its unassigned state.
+
+Let's check it out.
+
+[source,elixir]
+----
+iex(1)> good_memory = "I remember what I am assigned"
+"I remember what I am assigned"
+iex(2)> good_memory
+"I remember what I am assigned"
+iex(3)> _ = "You are great!"                  # We assign some value to _
+"You are great!"
+iex(4)> _                                     # We ask for the value stored in _
+** (CompileError) iex:4: unbound variable _   # _ had already entered its nirvana. It doesn't exist.
+----
+
+You can also use ignore operator as a prefix to a named variable to inject forgetfulness to it.
+
+----
+iex(3)> [_first, b, _last] = [1, 2, 3]
+----
+
+The above code works the same as using just `_`. The reason we might need this style of ignoring variables is to give some context to the programmer reading the code on what is being ignored. Consider the following tuple:
+
+[source,elixir]
+----
+iex> person = {:director, "Steven Spielberg"}
+----
+The tuple contains two elements. The first one denotes the role or position held by the person and the second one is the name of the person. If we want to get only the name through pattern matching, we can write it as follows:
+
+[source,elixir]
+----
+iex> {_role, name} = person
+----
+
+The above code is more explicit than just using `_` to ignore the first item. Just by looking at the code, we can say that we are ignoring the first value in the tuple which is storing possibly a value representing the role held by the person.

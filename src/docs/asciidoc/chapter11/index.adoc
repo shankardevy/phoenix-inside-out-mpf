@@ -1,0 +1,15 @@
+= Mango Robot
+
+include::_iteration_planning.adoc[]
+
+include::_setup.adoc[]
+
+include::_authenticating_chat.adoc[]
+
+include::_new_order.adoc[]
+
+include::_command.adoc[]
+
+include::_conversation.adoc[]
+
+include::_summary.adoc[]

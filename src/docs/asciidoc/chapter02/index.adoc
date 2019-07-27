@@ -1,0 +1,33 @@
+= Just enough Elixir
+
+This chapter is focused on learning the minimal amount of Elixir required to understand the code in a Phoenix project. We will quickly run through various basic Elixir concepts using the Phoenix project created in Chapter 1 to validate our learning. If you are already familiar with Elixir, you might want to skip this chapter or just scan through it quickly.
+
+include::_rabbit-hole.adoc[]
+
+include::_expectations.adoc[]
+
+include::_iex.adoc[]
+
+include::_data-types-operator.adoc[]
+
+include::_modules-functions.adoc[]
+
+include::_struct.adoc[]
+
+include::_pipe.adoc[]
+
+include::_pattern.adoc[]
+
+include::_control.adoc[]
+
+include::_mix.adoc[]
+
+include::_common-patterns.adoc[]
+
+include::_otp-basics.adoc[]
+
+include::_external-lib.adoc[]
+
+include::_summary.adoc[]
+
+include::_exercises.adoc[]

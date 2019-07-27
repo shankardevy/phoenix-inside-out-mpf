@@ -1,0 +1,16 @@
+[[acknowledgements]]
+= Acknowledgments
+
+First and foremost, I want to thank the Elixir Community for being a source of inspiration and support, without which this book series wouldn’t even exist.
+
+My heartfelt gratitude to my brother Kadiresan who despite his hectic schedule gave me the necessary guidance, support and valuable feedback all through my journey.
+
+My sincere thanks to my childhood friend and business partner Mohanraj who did the heavy lifting of managing our entire company's operations while I was busy writing the book.
+
+Some of the early readers of the book have been extremely helpful in providing me valuable feedbacks, constructive criticism and have spent a lot of time proofreading the text. Thank you John Hitz, Kyle Baker and Shan Huang  for being incredibly helpful.
+
+I am also thankful to Stuart Bain, Chase Wang, Ravern Koh, Heru Eko Susanto, Christopher Paterson, Christoffer Buchholz, Rodger Spring, Kishore Renangi, Uday Singh, Manu J, Azhaganandhan and Mohamed Mohsin for their valuable feedback.
+
+I thank Manoj for being a source of inspiration and helping me focus during the journey of writing this book.
+
+Lastly I wanted to thank my awesome family - my wife Devy, my son Nittin and my daughter Chaaru. Thank you for all your sacrifices, support, love and constant encouragement not only during the writing of this book but in all the endeavors that I undertake. I owe my gratitude to you all for eternity. You are the pillars of my success and life.

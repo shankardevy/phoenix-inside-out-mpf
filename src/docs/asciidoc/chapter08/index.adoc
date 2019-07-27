@@ -1,0 +1,11 @@
+= My Profile and Preference
+
+include::_iteration_planning.adoc[]
+
+include::_my_orders.adoc[]
+
+include::_manage_tickets.adoc[]
+
+include::_i18n.adoc[]
+
+include::_summary.adoc[]

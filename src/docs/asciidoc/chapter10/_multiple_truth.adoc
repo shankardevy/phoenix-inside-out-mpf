@@ -1,0 +1,23 @@
+== Multiple Sources of Fragmented Truth
+A side-effect (in the positive sense) of using Phoenix `Context` is, our mental model of having a single source of truth is broken and we start to accept multiple sources of fragmented truth as normal.
+
+We have generated two resources in the context `Warehouse`: Warehouse Item and Supplier.
+
+The schema for Warehouse Item stores the data in the database table `warehouse_items`. Without using Phoenix Context, all the information for Warehouse Item would have ended up on the `products` table. Our Warehouse Item contains the following information
+
+* price
+* sku
+* stock_quantity
+
+The `price` field on the Warehouse Item refers to the cost of the product or the price at which the Warehouse of the company purchases the Item. Product and Warehouse Items are the same thing seen from two different perspectives. Product is a Warehouse Item seen from the vantage point of a customer. Warehouse Item is a Product seen from the perspective of a Warehouse staff member. However, these two `things` are not one and the same. They might share a few common fields but each of them has its own distinctive feature that is not present in the other.  For example, Product might have an SEO field with text optimized for search engines but a warehouse staff member has no use for that feature. In the same way, the Warehouse Item might store the information of the supplier which is not needed for a customer purchasing it.
+
+This property of relatedness and distinctive information storage between two `things` which might also have a few common fields introduces multiple sources of fragmented truth. For many of us, who have been used to working with a single source of truth by keeping all information about an entity in one database table, this idea of fragmenting the data across multiple tables might need some mental recalibration. However, this is a good thing for the following reasons:
+
+* Increasingly large monolith applications are broken down into smaller micro services for various technical and non-technical reasons. The trend is going to increase as technology advances and more complex applications are being built. Microservices and monolithic database tables don't go very well together.
+
+* Breaking down monolithic database table into multiple smaller tables helps to avoid God Schema and helps in code maintainability.
+
+.Blueprints for Phoenix Context
+****
+In the booklet _Blueprints for Phoenix Context_ available with Phoenix Inside Out complete edition, I treat this topic in more detail and provide ideas and examples on implementing Phoenix Context in various scenarios.
+****

@@ -1,0 +1,9 @@
+== Summary
+
+This is the starting chapter for an awesome journey to build a working ecommerce site.
+
+Here we laid our ground work by understanding the scope of the work, we identified two personas for the project, and created various user stories for these personas.
+
+We applied our newly acquired knowledge to installing Phoenix, creating a new Phoenix project, and added our project dependencies. We started to understand the importance of Test Driven Development and leant the basics of how Hound plays an integral part in TDD.
+
+Finally, we had a bootstrap session on using Hound. We installed the Hound library, learnt various key commands for using Hound, and explored a short list of tasks that can be automated using it.

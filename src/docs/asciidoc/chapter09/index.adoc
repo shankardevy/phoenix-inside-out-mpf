@@ -1,0 +1,13 @@
+= Admin - I
+
+include::_iteration_planning.adoc[]
+
+include::_manage_users.adoc[]
+
+include::_admin_layout.adoc[]
+
+include::_magic_link.adoc[]
+
+include::_exercises.adoc[]
+
+include::_summary.adoc[]

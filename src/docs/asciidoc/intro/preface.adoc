@@ -1,0 +1,11 @@
+= About the author
+
+Shankar Dhanasekaran (@shankardevy) is an entrepreneur and a tech savvy programmer with more than a decade of experience in various web frameworks and technologies.
+
+Shankar provides his global customers with a wide range of services including Web Development, E-Commerce Solutions, Server Management and Mobile Applications Development.
+
+Shankar’s latest passion is designing and developing a decentralized swarm of microservices using Phoenix and Ruby on Rails for the community of Auroville where he lives.
+
+On a personal level, he is inspired by https://www.auroville.org/contents/1[Auroville Charter], https://www.auroville.org/contents/197[A Dream] and by the works of Derek Sivers, Charles Eisenstein and Osho to name a few. He is exploring his human potential through Gift Economy and Karma Yoga.
+
+Shankar is best reached at shankardevy@gmail.com

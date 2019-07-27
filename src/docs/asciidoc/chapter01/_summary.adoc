@@ -1,0 +1,15 @@
+== Summary
+
+Let's recap on the key concepts that we learnt in this chapter.
+
+We learnt to install the various dependencies of the Phoenix Framework for macOS & for Ubuntu/Debian OS. We also installed the Phoenix project generator which we use by issuing the command `mix phx.new projectname`
+
+As with any other Elixir project, we learnt that the Phoenix framework is installed as one of the dependencies of our project inside the `deps` folder. Hence all Phoenix projects are self-contained with a version of Phoenix installed inside each project.
+
+We also configured the database connection, got to know a few mix tasks and understood the file structure of Phoenix.
+
+Then we moved on to understanding how a page request is served by Phoenix. We did this by looking at the various interconnected critical components of our project including the Router, Controller, View and Templates.
+
+Along with this, we also understood the inherent naming conventions and how Phoenix automatically identifies and links Controllers, Views and Templates.
+
+Finally, we flexed our muscle by creating a new static page and getting it served successfully.

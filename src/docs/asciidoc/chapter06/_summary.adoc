@@ -1,0 +1,9 @@
+== Summary
+
+We are gradually upping the ante on the complexity of an ecommerce site. We are now using Carts, we learned how to use embedded schema for line items and how to validate data throughout the cart process.
+
+For the implementation of the cart we depended on knowledge gained in the previous chapter. We set the session value, created a new plug and used changesets. As promised, the complexity involved has increased from what we saw in the previous chapter. However, it has increased in a measured way that is not overwhelming.
+
+Through out, we created the functions using TDD. We added the AJAX implementation to our cart which was surprisingly easy and fun.  Finally, thanks to Phoenix Views, we were able to send JSON data without much hassle.
+
+We are making great progress, so lets continue on!

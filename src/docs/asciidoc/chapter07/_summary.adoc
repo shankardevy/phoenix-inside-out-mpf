@@ -1,0 +1,12 @@
+== Summary
+In this chapter, we implemented the authentication requirement. In the process we learned how _to refactor the router file_ to clearly divide the routes that require authentication from those that do not. We also created new router pipelines and used them inside router scopes.
+
+We wrote a module Plug that does the authentication and in the process learned how _to halt a Plug pipeline_. We reused our existing knowledge of _adding and retrieving data from the session_ in order to redirect the users back to the protected route they were trying to visit -- i.e. the checkout page after login.
+
+As we began to modify the datastore to hold additional information on checkout, we
+
+* _used Ecto migration_ to modify our existing `orders` table to store missing customer data.
+* _modified our schema definitions and changeset functions_ for the updated `orders` table.
+* Learned when and how to _use multiple changesets_ by creating a new `order_changeset` function to complete our checkout process.
+
+We have taken a long journey from initially showing the products on the homepage to completing the checkout process as a customer. Take time to recap the journey from Chapter 3 and recall the various steps we have taken to arrive here. Also, take time to review any information that is unclear and let move on!

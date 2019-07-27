@@ -1,0 +1,82 @@
+:book-title: Mastering Phoenix Framework
+:author: Shankar Dhanasekaran
+:email:  shankardevy@gmail.com
+:revnumber: 1.1.1
+:revdate: {docdate}
+:revyear: 2017
+:subject: Phoenix Framework
+:keywords: Phoenix, Elixir, Ecto
+:doctype: book
+:media: screen
+ifeval::["{media}" != "prepress"]
+:front-cover-image: image:images/cover.png[Front Cover]
+endif::[]
+:toc:
+:toclevels: 3
+:sectnums:
+:sectnumlevels: 3
+:icons: font
+:lang: en
+:language: javascript
+:localdir: ./
+:source-highlighter: rouge
+:experimental:
+:pdf-fontsdir: ./styles/pdf/fonts
+:pdf-stylesdir: ./styles/pdf
+:pdf-style: pio
+ifndef::ebook-format[:leveloffset: 1]
+
+= {book-title}
+
+:numbered!:
+[colophon#colophon%nonfacing]
+include::intro/colophon.adoc[]
+
+include::intro/dedication.adoc[]
+
+[%nonfacing]
+include::intro/acknowledgements.adoc[]
+
+[preface]
+include::intro/preface.adoc[]
+
+[feedback]
+include::intro/feedback.adoc[]
+
+:numbered
+
+[[chapter-1]]
+include::chapter01/index.adoc[]
+
+[[chapter-2]]
+include::chapter02/index.adoc[]
+
+[[chapter-3]]
+include::chapter03/index.adoc[]
+
+[[chapter-4]]
+include::chapter04/index.adoc[]
+
+[[chapter-5]]
+include::chapter05/index.adoc[]
+
+[[chapter-6]]
+include::chapter06/index.adoc[]
+
+[[chapter-7]]
+include::chapter07/index.adoc[]
+
+[[chapter-8]]
+include::chapter08/index.adoc[]
+
+[[chapter-9]]
+include::chapter09/index.adoc[]
+
+[[chapter-10]]
+include::chapter10/index.adoc[]
+
+[[chapter-11]]
+include::chapter11/index.adoc[]
+
+[[chapter-12]]
+include::chapter12/index.adoc[]

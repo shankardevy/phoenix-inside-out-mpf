@@ -1,0 +1,6 @@
+= Mastering Phoenix Framework
+
+Source repo of Mastering Phoenix Framework book written in Asciidoc format.
+
+HTML version of the book can be viewed for free at https://shankardevy.com/phoenix-inside-out-mpf/
+

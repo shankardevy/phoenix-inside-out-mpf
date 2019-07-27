@@ -1,0 +1,13 @@
+== Iteration Planning
+
+In this chapter, we will work on the following user stories
+
+As an anonymous user, I should be redirected to the login page during checkout.
+
+As a customer, I want to complete my purchase through a checkout process.
+
+To complete these user stories we need to write a new Plug module for authorization and add a few new routes for the checkout process. Since we are adding a new Plug module to the router pipeline and adding more routes, this is a perfect time to refactor our Router file so that we can have separate router scopes for authenticated users and Unauthenticated users.
+
+// Also when a customer is not signed in and adds products to the cart, we need to retain the same cart configuration after the customer signs in during checkout. For this feature, we need to make some minor modifications to the login process so that the cart information is not lost during session regeneration.
+
+Finally, we will do the now familiar Controller-View-Template drill for the checkout page. By the end of this chapter, you will be comfortable with writing a Plug module and dealing with session data.

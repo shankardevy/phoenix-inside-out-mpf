@@ -1,0 +1,209 @@
+== Data types and Operators
+
+The following is a list of common data types that we will come across in Phoenix projects. Open an IEx shell and start trying them out.
+
+----
+iex> 1                          # integer
+iex> 1.0                        # float
+iex> true                       # boolean
+iex> :any                       # atom
+iex> "any"                      # string
+iex> [1, 2, 3]                  # list
+iex> {1, 2, 3}                  # tuple
+iex> [key: "value"]             # Keyword List
+iex> %{key: "value"}            # map
+iex> %StructName{key: "value"}  # struct
+----
+Except for the struct example above, we can type all of them in our `iex` shell to play with them.
+
+=== Atom
+
+Atoms are constants whose name is their value. Atoms start with `:` (colon). If you are coming from Ruby, it's the same as `:symbol` but with an important difference. Atoms are not garbage collected. That means if we create an Atom in our program, it lives forever.
+
+
+[WARNING]
+====
+Since once created an Atom lives forever, it's not a good idea to dynamically create Atoms from user input.
+
+[source,Elixir]
+----
+  dynamic_input = get_user_input()
+  String.to_atom(dynamic_input)
+----
+
+A malicious user could technically max out the total number of Atoms that can be created in a system thereby bringing the system to a halt.
+====
+
+An Atom on it's own is minimally useful. In practice, it's often combined with another data type such as a Tuple.
+
+=== Tuple
+Tuple stores a collection of data. Items in tuple are comma separated and the entire data is enclosed within `{}`.
+
+----
+iex> {:ok, "Hello world"}
+----
+
+The Tuple is the de-facto data structure in functions that need to return more than one value. For example, Elixir's built-in function `File.read` returns the Tuple `{:ok, file_content}` when the file read is successful; it returns the Tuple `{:error, reason}` when there is an error in reading the file. In this case the function `File.read` needs to return two values and it makes use of the Tuple to do so.
+
+Atoms are mostly paired with Tuple data to annotate the type of data that is being stored in the tuple. By convention, the first element of most Tuples is an atom, though it's not a necessity.
+
+=== List
+List also stores a collection of data. Items in the list are comma separated and the entire data is enclosed within `[]`.
+
+----
+iex> [1, 2, 3, 4, 5]
+----
+
+Both Tuple and List data types are used to store a collection of data. The difference lies in how the Elixir language implements them internally.
+
+====
+.From the official docs
+Lists are stored in memory as linked lists, meaning that each element in a list holds its value and points to the following element until the end of the list is reached.
+
+Tuples, on the other hand, are stored contiguously in memory. This means getting the tuple size or accessing an element by index is fast. However, updating or adding elements to a tuples is expensive because it requires copying the whole tuple in memory.
+====
+
+In practice, we use a List to store collections when we don't know the total number of items in our collection ahead of time.
+For example, if we are parsing a CSV file, we will use a List to store the items from the CSV file. This is because the total number of items in the CSV file can vary.
+
+----
+iex> ["product1", "product2", ..., "productn"]
+----
+
+Tuples on the other hand are used to store collections of known size. Return values of functions are a perfect example. We know ahead of time how many items we will return from a function and we can use Tuple for this purpose.
+
+=== Keyword List
+Keyword List stores one or more (key, value) pairs.
+
+----
+iex> [book: "Harry Potter"]
+----
+
+----
+iex> [name: "Nittin", sex: :male, interests: ["cooking", "programming"]]
+----
+
+Internally, Elixir uses a List of two element Tuples to build a Keyword List.
+
+To verify, let's type a List of two element Tuple, whose first element is an Atom.
+
+----
+iex(1)> [{:a, 1}, {:b, 2}]  # List of two element tuple
+[a: 1, b: 2]                # We got a Keyword List
+----
+
+Since, a Keyword List is just list of tuples under disguise, the keys in the Keyword List can be repeated.
+
+----
+iex> [a: 1, a: 2, a: 3]
+----
+
+
+=== Map
+Like Keyword Lists, a Map is a data type for storing one or more (key, value) pair. Unlike Keyword Lists, keys in a map cannot be repeated. If you are familiar with Python, an Elixir map is a Python dict. Or if you are familiar with Ruby, it's a Ruby hash.
+
+A map is created using the `%{}` syntax.
+
+----
+iex> %{ name: "Harry Potter", author: "J.K.Rowlings" }
+----
+
+Map keys can be atoms, strings, or mixed.
+
+----
+iex> %{ "string_key" => "value" }
+iex> %{ "string_key" => "value", some_atom: "value" }
+----
+
+=== Struct
+Structs are maps that have a predefine set of allowed keys. The Struct is the most commonly used data type in Phoenix for representing business entities. Since structs need a module definition, which we have yet to see, we will explore the struct data type after an introduction to Elixir modules in the subsequent section.
+
+=== Operators
+We have already seen the Math operators `+`, `-`, `*`, `/`. Let's quickly run through the other operators.
+
+**Equality**
+
+`==`, `!=`, `===` and `!==`
+
+[source,Elixir]
+----
+# Check if value on both sides are same
+iex> 5 == 5      # true
+iex> 5 == 5.0    # true
+iex> 5 == 4      # false
+
+# Check if value on both sides are not same
+iex> 5 != 4      # true
+iex> 5 != 5      # false
+
+# Check if both value and type are the same on both sides
+iex> 5 === 5.0   # false
+
+# Check if either value or type are not the same on both sides
+iex> 4 !== 4.0     # true
+----
+
+**Comparison**
+
+`>`, `<`, `>=`, `<=`
+
+[source,Elixir]
+----
+# Self explanatory
+
+iex> 4 > 3   # true
+iex> 3 > 4   # false
+iex> 3 < 4   # true
+iex> 4 < 3   # false
+iex> 4 >= 4  # true
+iex> 4 <= 4  # true
+----
+
+**Logic**
+
+`and`, `or`, `&&`, `||`
+
+----
+iex> true and false    # false
+iex> false or true     # true
+iex> false and false   # false
+iex> false or false    # false
+iex> true and true     # true
+iex> 4 && false        # false
+iex> 4 || nil          # 4
+----
+
+Elixir considers any value other than `false` or `nil` to be true.
+There is a subtle difference between `and` and `&&`.
+The `and` operator requires the left side operand to be either `true` or `false` while the `&&` operator can accept any operand.
+The same difference applies to `or` and `||`.
+
+If you try to use `and` or `or` on a non-boolean left-operand, you will get an error.
+
+----
+iex> 5 and true
+** (BadBooleanError) expected a boolean on left-side of "and", got: 5
+----
+
+**Negation**
+
+`!` and `not`
+
+----
+iex> !true  # false
+iex> !!true # true
+iex> not true  # false
+----
+
+**Concatenate**
+
+`<>` is a concatenate operator that works with binary data. It joins two binary data into one.
+
+----
+iex> "Hello" <> " " <> "World"
+"Hello World"
+----
+
+**Other Operators**
+
+There are other important operators such as the `=` (match operator), the `|>` (pipe operator), and the `_` (ignore operator). We will explore them in detail in the subsequent sections of this chapter.

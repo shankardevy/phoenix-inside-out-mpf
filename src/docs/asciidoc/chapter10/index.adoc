@@ -1,0 +1,9 @@
+= Admin - II
+
+include::_iteration_planning.adoc[]
+
+include::_customizing_templates.adoc[]
+
+include::_multiple_truth.adoc[]
+
+include::_summary.adoc[]

@@ -1,0 +1,28 @@
+== Iteration Planning
+
+[quote, Extreme Programming, 'http://www.extremeprogramming.org/rules/simple.html[Simplicity is the key]']
+____
+A simple design always takes less time to finish than a complex one.
+So always do the simplest thing that could possibly work next.
+____
+
+In this chapter we will cover the following user stories.
+
+As a *customer*, I want to
+
+. See seasonal products
+. Browse products by category
+
+It's important to note that we do not have a user story for managing products selected as one of our first user stories to develop.
+The reasons we did not select *Manage Products* are
+
+* Typically a user story like *Manage Products* is a term for a group of user stories involving actions such as
++
+Create, List, View, Update and Delete products
+* Though all these actions can be implemented using a single CRUD resource generating command like `phx.gen.html` (which we will see in Chapter 8 and 9), it's often an incomplete implementation of the business rules.
+* Each of the above actions needs different levels of access permissions which are not handled by the CRUD generators.
+* In the case of the Mango shop, I have the insider knowledge from the fictional shop owner that they don't update products often.
++
+So the value of the user story *Manage Products* is less than having the customer actually see them in the online store.
+
+In addition to the reasons mentioned, our approach will also help us to organically build our knowledge of Phoenix by starting with simpler functions without Ecto and then build upon this knowledge to understand Ecto's Migration, Schema and Repo over time.

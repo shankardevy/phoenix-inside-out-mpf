@@ -1,0 +1,64 @@
+== Remember redirect path
+
+Checkout is now accessible only to authenticated customers. However, there is a UX issue with our implementation.
+If the customer gets redirected to the login page when visiting the checkout link,
+we expect the customer to be returned to the checkout page after they login.
+However, in our current implementation, the customer gets redirected to the homepage after login which is an unexpected behavior from a usability point of view.
+
+*How do we solve this?*
+
+Before redirecting, we need to store the path requested by the user in the session data as `intending_to_visit`.
+When the user signs in, we check if `intending_to_visit` has data. If so, we use the stored value to forward the user on to their intended destination; otherwise we redirect them to the homepage.
+
+.lib/mango_web/plugs/authenticate_customer.ex https://gist.github.com/shankardevy/45cfe36cfbc5cb031be95e8d1a12e149[Link]
+```elixir
+defmodule MangoWeb.Plugs.AuthenticateCustomer do
+  import Plug.Conn
+  import Phoenix.Controller, only: [redirect: 2, put_flash: 3]
+
+  def init(opts), do: nil
+
+  def call(conn, _opts) do
+    case conn.assigns[:current_customer] do
+      nil ->
+         conn
+         |> put_session(:intending_to_visit, conn.request_path) <1>
+         |> put_flash(:info, "You must be signed in")
+         |> redirect(to: "/login")
+         |> halt
+      _ ->
+         conn
+    end
+  end
+end
+```
+<1> Store the path that the user has requested in the session under the key `intending_to_visit`.
+
+
+Now edit the SessionController file and modify the redirect path after login.
+
+.lib/mango_web/controllers/session_controller.ex https://gist.github.com/shankardevy/5873a8f9cf58b29e4343af6aaf7ab3ba[Link]
+```elixir
+def create(conn, %{"session" => session_params}) do
+  case CRM.get_customer_by_credentials(session_params) do
+    :error ->
+      conn
+      |> put_flash(:error, "Invalid username/password combination")
+      |> render("new.html")
+    customer ->
+      path = get_session(conn, :intending_to_visit) || page_path(conn, :index) <1>
+      conn
+      |> assign(:current_customer, customer)
+      |> put_session(:customer_id, customer.id)
+      |> configure_session(renew: true)
+      |> put_flash(:info, "Login successful")
+      |> redirect(to: path) <2>
+  end
+end
+```
+<1> Add this line to choose the path to redirect after login.
+<2> Change this line to redirect to the path stored in step 1.
+
+With this minor change, we can now try going to `/checkout`. We will be prompted to sign in and when signed in, we will automatically be redirected to the `/checkout` page.
+
+What happens if we aren't registered and want to create an account during the checkout process? Our implementation above will still work if we try to register for an account after being redirected to the login screen. Once registered, the login page will still redirect to the checkout page. See if you can try to figure out how this redirect works.

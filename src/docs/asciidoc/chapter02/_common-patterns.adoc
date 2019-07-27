@@ -1,0 +1,163 @@
+== Common Patterns
+
+=== use
+
+Here is the code from the `PageController` of the project created in Chapter 1.
+Look at line 2 of the module where it says `use LearnPhoenixWeb, :controller`.
+
+.lib/learn_phoenix_web/controllers/page_controller.ex
+```elixir
+defmodule LearnPhoenixWeb.PageController do
+  use LearnPhoenixWeb, :controller
+
+  def index(conn, _params) do
+    render conn, "index_new.html"
+  end
+
+  def about(conn, _params) do
+    render conn, "about.html"
+  end
+end
+```
+This is a common pattern that we will see in many places in our Phoenix projects.
+It's used to add a piece of common code to one or more modules.
+Let's look at how it works.
+
+Open the referenced `LearnPhoenixWeb` module.
+It reads as below:
+
+.lib/learn_phoenix_web.ex
+```elixir
+defmodule LearnPhoenixWeb do
+  def controller do
+    quote do <1>
+      use Phoenix.Controller, namespace: LearnPhoenixWeb
+      import Plug.Conn
+      import LearnPhoenixWeb.Router.Helpers
+      import LearnPhoenixWeb.Gettext
+    end
+  end
+
+  (...)
+  defmacro __using__(which) when is_atom(which) do
+    apply(__MODULE__, which, [])
+  end
+end
+```
+<1> Common code that we want in every controller module.
+
+When module A uses module B, module A calls the `\___using___/1` macro defined in the module B at the time of compilation.
+Here our `PageController` module has the line `use LearnPhoenixWeb` passing in an additional argument `:controller`
+and so it calls the `\___using___` macro defined in the module.
+
+****
+While a function is called to execute a piece of common code in multiple places, a macro is called to inject a piece of common code in multiple places as if we typed the injected lines of code in that location ourselves.
+****
+
+In the above example, `\___using___` macro checks the incoming argument value for the parameter `which` and calls the function by the same name inside the module `LearnPhoenixWeb`. We are passing in `:controller` as the value for `which` and so the code in `controller/0` function gets called.
+
+The controller function has the following code
+```elixir
+def controller do
+  quote do
+    use Phoenix.Controller, namespace: LearnPhoenixWeb
+    import Plug.Conn
+    import LearnPhoenixWeb.Router.Helpers
+    import LearnPhoenixWeb.Gettext
+  end
+end
+```
+
+The code inside the `quote do..end` block is called in place of the line that calls this function making the `PageController` read as below during the time of compilation. The line `use LearnPhoenixWeb, :controller` vanishes and in its place, we have 4 lines of code.
+It again has a `use` call, which the compiler will expand recursively until it finds no more `use` that can be expanded.
+
+```elixir
+defmodule LearnPhoenixWeb.PageController do
+  use Phoenix.Controller, namespace: LearnPhoenixWeb
+  import Plug.Conn
+  import LearnPhoenixWeb.Router.Helpers
+  import LearnPhoenixWeb.Gettext
+
+  def index(conn, _params) do
+    render conn, "index_new.html"
+  end
+
+  def about(conn, _params) do
+    render conn, "about.html"
+  end
+end
+```
+
+The injected code again has a `use` call, which the compiler will expand recursively until it finds no more `use` that can be expanded.
+
+Without the `use` macro, we will be required to type several lines of code by ourselves in all controller modules. The `use` macro takes care of this rote task for us.
+
+==== import
+In the above example, we have several `import` statements.
+
+```elixir
+import Plug.Conn
+import LearnPhoenixWeb.Router.Helpers
+import LearnPhoenixWeb.Gettext
+```
+
+`import` is again a macro which makes the functions defined in the imported module available in the current module scope. It does not inject the code as done by the `use` macro.
+Lets understand this with an example.
+The Plug.Conn module defines several public functions to manipulate the web request. These functions can be called from any controller module using the syntax `Plug.Conn.function_name`.
+Since manipulating the request object is the main job of a controller module, we might need several function calls from the `Plug.Conn` module. Without the use of `import`, these function calls will be too verbose as shown below:
+
+```elixir
+def some_action_in_controller(conn, _) do
+  conn
+  |> Plug.Conn.put_session(:customer_id, customer.id)
+  |> Plug.Conn.configure_session(renew: true)
+  |> Phoenix.Controller.put_flash(:info, "Welcome back!")
+  |> Plug.Conn.redirect(to: page_path(conn, :index))
+end
+```
+
+If we use `import Plug.Conn` in the controller module, then we could compact the above code as below:
+
+```elixir
+def some_action_in_controller(conn, _) do
+  conn
+  |> put_session(:customer_id, customer.id)
+  |> configure_session(renew: true)
+  |> Phoenix.Controller.put_flash(:info, "Welcome back!")
+  |> redirect(to: page_path(conn, :index))
+end
+```
+
+
+==== alias
+While the `import` macro helps us to reduce code clutter by making the function calls work without the module name prefix, it comes with a cost. When we have several `import` calls in a module, it brings in two challenges
+
+1. We need to make sure we are not importing modules that define functions using the same name. Doing so will raise errors at the time of calling the function.
+
+2. It's difficult to identify the module that defines the function since all calls are made without the module name prefix.
+
+For these two reasons, use of `import` should be limited to a minimum. While `MyModuleName.SubModule.func1` is too explicit, using just `func1` by importing the module is too implicit. How can we reach a point in the middle? That's where `alias` comes in.
+
+`alias` helps us write function call such as `Deeply.Nested.Module1.func1` in the format `Module1.func1` or `Nested.Module.func1`
+
+```elixir
+# Add alias to a module.
+# Automatically alias the module to its basename
+alias Mango.Catalog
+
+# Somewhere else in the module
+products = Catalog.list_products
+```
+
+```elixir
+# Add alias to a module with a different name
+alias Mango.Sales.Order, as: Cart
+
+# same as %Mango.Sales.Order{}
+cart = %Cart{}
+```
+
+```elixir
+# Add alias to multiple modules in one line
+alias Mango.CRM.{Customer, Ticket}
+```

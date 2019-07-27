@@ -1,0 +1,13 @@
+== Summary
+We learned several new concepts in this chapter related to Phoenix Channels. Specifically we learned the various key components of a successful channel communication such as
+
+* Socket JS client
+* Socket module in Phoenix
+* Channel module in Phoenix
+
+We learned the flow of control between client and server by implementing a chat server. We implemented two types of channel communications i.e.,
+
+* Broadcast message to all clients from the server (We used this feature for sending new order notification on the chat window)
+* One-to-one communication with the server (We used this feature for implementing a slash command feature)
+
+We also compared channel communication with controller actions and learned how the `socket` struct compares to the `conn` struct and how to persist data in the `socket` struct.

@@ -1,0 +1,21 @@
+== Summary
+In this chapter we took a deep dive into Ecto and extended our knowledge about this important tool for using Phoenix.
+
+The main focus was how to understand the Ecto.Changeset.
+
+We played with Ecto in the IEx shell to understand how it helps us to validate data.
+
+We also learnt how to utilize `form_for` HTML helpers to get input forms complete with built-in CSRF support
+and how to process form values in our controller.
+
+We learned to use a virtual field to receive and hold the plain text password and used the `comeonin` library for encrypting it within our `changeset/2` function.
+
+Along the way, in order to ensuring our TDD application was working as expected, we also did various acceptance tests in Hound.
+
+Finally we worked to understand the most critical piece of information. That is how to keep a session active and help validate the customer details across multiple page request. We accomplished this task by writing a `plug` module and learned how to use it in the `router.ex` pipeline.
+
+In keeping with this book's intention to understand the Phoenix Framework and help you put the concepts to practical use building an application, we have started to dig into some of the most important concepts in Phoenix. We have worked on building some practical underpinnings of web development including registration, login, and logout functionalities. We have learned how and where to make changes (router, controller, templtes, etc.) to achieve important functionality that is applicable to any website. More broadly we have learned how to define routes and views, pass value from controllers, to templates, and on to template partials.
+
+In order to reinforce this information we will utilize it multiple times in more complex scenarios as we progress though the rest of the book. Meanwhile, incase you have not fully grasped any of this information now may be a good time to review.
+
+Cheers!

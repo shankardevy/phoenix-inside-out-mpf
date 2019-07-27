@@ -1,0 +1,211 @@
+== Installation
+
+In this section, we will install all the dependencies for the Phoenix framework including installation of Elixir and Erlang. We will cover installation instructions for macOS and Ubuntu/Debian here. However, Phoenix can run in several flavors of Linux as well as in Microsoft Windows. For installation instructions related to other platforms, check out the official installation page for http://elixir-lang.org/install.html[Elixir] and  http://www.phoenixframework.org/docs/installation[Phoenix].
+
+=== Homebrew for macOS
+
+We will be using the Homebrew package manager for installing all the Phoenix dependencies for macOS. So if you don't have Homebrew installed, go to https://brew.sh and copy paste the install script on your terminal to install it. While Homebrew is not a prerequisite for Phoenix or Elixir, it helps us to install everything we need from the comfort of the command line.
+
+=== Installing Elixir and Erlang
+
+[source,bash]
+.**on macOS**
+----
+→ brew install elixir
+----
+
+The above command installs the latest stable version of Elixir along with Erlang. At the time of writing, this installs Elixir 1.4 which is what we need.
+
+**On Ubuntu and Debian**
+
+We need to install Erlang and Elixir individually.
+
+Download the Erlang package and install it.
+
+[source,bash]
+----
+→ wget https://packages.erlang-solutions.com/erlang-solutions_1.0_all.deb
+→ sudo dpkg -i erlang-solutions_1.0_all.deb
+→ sudo apt-get update
+→ sudo apt-get install esl-erlang
+----
+Now you can install Elixir using:
+
+[source,bash]
+----
+→ sudo apt-get install elixir
+----
+
+=== Installing Postgresql
+
+Phoenix projects by default are configured to work with the Postgresql database, though, any database that is supported by the Ecto library will work. We can also use Phoenix without any database if we need to. In this book, we will use the Postgresql database as it enjoys good support in the Elixir community. In addition to being well supported it also has features not provided by other databases that we will require later.
+
+[source,bash]
+.**on macOS**
+----
+→ brew install postgresql
+----
+
+Once installed, Brew will print post installation notes as shown below:
+
+----
+...
+To have launchd start postgresql now and restart at login:
+  brew services start postgresql
+Or, if you don't want/need a background service you can just run:
+  pg_ctl -D /usr/local/var/postgres start
+----
+
+Be sure to run either of the commands shown above as per your need. Normally, I run `brew services start postgresql` so that I can forget about starting the Postgres server every time I restart my system.
+
+Brew installs Postgresql and creates a default super admin. The name of this super admin is the same as the name of your currently logged-in system account name while the password is left empty. We could just go with that. However, for every Phoenix project that we create, we need to modify the configuration file to give the right credentials for the Postgres database.
+
+Phoenix projects by default expect the Postgres admin username to be `postgres` with the password `postgres`. We can save a few key strokes for every new project by creating a Postgres user as expected by Phoenix. Login to Postgres shell by typing `psql -d postgres` on your terminal.
+
+On the Postgres console, type the following commands to create a super user by name `postgres` with the password `postgres`.
+
+[source,sql]
+----
+postgres=# CREATE USER postgres;
+postgres=# ALTER USER postgres PASSWORD 'postgres';
+postgres=# ALTER USER postgres WITH SUPERUSER;
+postgres=# \q
+----
+
+**On Ubuntu and Debian**
+
+Install `postgresql` and `postgresql-contrib` through `apt-get` as shown below:
+
+----
+→ sudo apt-get install postgresql postgresql-contrib
+----
+Ubuntu installation of Postgres creates a default super admin in the name of `postgres` but doesn't set the password. So you might want to set the password to `postgres` on your local machine to match the default settings for Phoenix projects. Login to Postgres shell by typing `sudo -u postgres psql postgres` on your terminal.
+
+[source,sql]
+----
+postgres=# ALTER USER postgres PASSWORD 'postgres';
+postgres=# \q
+----
+
+=== Nodejs
+Phoenix projects by default are setup to use Brunch -- a nodejs tool for the management of asset files. In the development environment, all static files like images, fonts, CSS and Javascript files get processed by Brunch before Phoenix serves them. In the production environment we can use the precompiled files from our development machine without having to use Brunch on the production server.
+
+Even in the development environment Brunch is not a hard dependency -- meaning if we don't want Brunch we can simply remove a simple configuration line in our project and still have Phoenix continue to work. Or we could replace Brunch with other tools like Webpack if we prefer. We will install Nodejs as we will use Brunch for managing the asset files in the development environment.
+
+[source,bash]
+.**on macOS**
+----
+→ brew install node
+----
+
+[source,bash]
+.**On Ubuntu and Debian**
+----
+→ curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
+→ sudo apt-get install -y nodejs
+----
+
+=== inotify-tools (only for linux)
+In the development environment, Phoenix provides live reloading feature that automatically refreshes our browser tabs whenever we change the source code in our project. On linux machines, this feature is dependent on `inotify-tools` while it's not needed on macOS or windows.
+
+Install `inotify-tools` using the command shown below:
+
+[source,bash]
+----
+→ sudo apt-get install inotify-tools
+----
+
+=== Hex Package Manager
+
+Hex is the package manager for Elixir libraries. It allows us to upload/download Elixir libraries from the https://hex.pm website.
+
+[source,bash]
+----
+→ mix local.hex
+----
+
+=== Rebar - Erlang Build Tool
+
+`rebar` and `rebar3` are Erlang build tools for compiling and testing Erlang applications. Since our Phoenix project will depend on some of the Erlang libraries, we need Rebar to be installed on our machine.
+
+
+[source,bash]
+----
+→ mix local.rebar
+----
+
+`mix` is a command line binary that gets installed as part of the Elixir language installation. Since this is a sub-command of `mix`, a binary installed in our system as part of installing Elixir, the above command to install `hex` and `rebar` is same for all OS.
+
+=== Phoenix Project Generator
+
+And finally to install the Phoenix project generator, run the following command:
+
+[source,bash]
+----
+→ mix archive.install https://github.com/phoenixframework/archives/raw/master/phx_new.ez
+----
+
+It’s important to note that the above command installs the Phoenix project generator and not Phoenix itself. After installing the Phoenix generator, all that we get is a new sub command to `mix`, to create a new Phoenix project. The Phoenix framework itself gets installed within our project directory under the `deps` folder when we run the `mix deps.get` command which we will see shortly.
+
+
+=== Validating the Installation
+
+Run the following commands on the terminal to confirm you have installed the correct version of Elixir, Phoenix the required dependencies.
+
+
+[source,bash]
+.**Elixir**
+----
+→ elixir -v
+Erlang/OTP 19 [erts-8.2] [source] [64-bit] [smp:4:4] [async-threads:10] [hipe] [kernel-poll:false] [dtrace]
+
+Elixir 1.4.0
+----
+Elixir version should be **1.4.0** or higher.
+
+[source,bash]
+.**Phoenix**
+----
+→ mix help | grep 'phx.new'
+
+mix phx.new           # Creates a new Phoenix v1.3.0 application
+----
+
+Phoenix version should be **1.3.0** or higher.
+
+
+[source,bash]
+.**PostgreSQL**
+----
+→ psql --version
+
+psql (PostgreSQL) 9.6.1
+----
+
+PostgreSQL version should be **9.4** or higher.
+
+[source,bash]
+.**Nodejs**
+----
+→ node -v
+
+v7.2.1
+----
+
+Node version should be **5.0.0** or higher.
+
+=== Code Editor
+
+For a good developer experience, we will need a code editor that supports syntax highlighting and auto code completion for Elixir. There are several text editors that support the Elixir language. My personal choice is the https://atom.io[Atom] editor.
+
+If you are a die-hard Emac or Vim fan, you might want to check out http://spacemacs.org/[Spacemacs]. For the rest of us, Atom works as a good editor for working with Elixir projects.
+
+If you go with Spacemacs, do install the excellent https://github.com/tonini/alchemist.el[Alchemist] package for Elixir. It provides syntax highlighting, code completion and several other features that help your development workflow with Elixir projects.
+If you are on Atom, you can install https://atom.io/packages/language-elixir[language-elixir] and https://github.com/msaraiva/atom-elixir[atom-elixir] packages to do similar stuff in Atom. The Atom packages can be installed from the terminal with a single command.
+
+[source,bash]
+----
+→ apm install language-elixir atom-elixir
+----
+
+If you are not a fan of either of these editors, pick up one that suits your taste, but make sure that it at least supports syntax highlighting for Elixir.

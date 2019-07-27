@@ -1,0 +1,81 @@
+== Pipe Operator
+The pipe operator is one of my favorite features in the Elixir language. The more I use it, the more I feel it aligns with the natural way we think and break down problems.
+
+The pipe operator in Elixir is `|>`. It's used for writing nested function calls. In the last section, we already used a nested function call inside our function `random_product/1`.
+
+[source,elixir]
+----
+Enum.random(list_products)
+----
+Whenever a nested function call is written like this, we have to rewire our brain to read the code from inside out. That is, we read the innermost function call and then work our way out. Pipe operator solves this problem of backward reading by allowing us to write functions in the way they naturally flow. The above function call written using `|>` operator will be as follows:
+
+[source,elixir]
+----
+list_products
+|> Enum.random
+----
+
+It can also be written in a single line like:
+
+[source,elixir]
+----
+list_products |> Enum.random
+----
+
+Basically, the pipe operator takes the value on the left side of the operator and passes it as the first argument of the function call on the right side.
+
+On a simple problem like this, it's not very easy to appreciate the benefits of the pipe operator. Let's take a slightly more complex problem from https://projecteuler.net[Project Euler]
+
+> Find the sum of all even numbers in a fibonacci series below 1000.
+
+Looking at this problem, there are several steps involved to solve this.
+
+1. Generate the fibonacci series below 1000.
+2. Pick the even numbers in the series.
+3. Find the sum of those numbers.
+
+Each step in this solution is dependent on the result from the previous step. Each step is doing a simple small task and is arranged in the natural order in which our brain solves the problem. Compare it with the order given below:
+
+1. Find the sum of numbers.
+2. Pick the even numbers in the series.
+3. Generate the fibonacci series below 1000.
+
+Obviously this order is difficult to comprehend and is not how we think when we break down a problem into small steps. It makes sense only when you read it in the reverse order. However, this is how most programming languages require you to write the solution: `find_sum(pick_even_numbers(generate_fibonacci(1000)))`. In Elixir, you can write the problem in the natural way using pipe operator like
+
+[source,elixir]
+----
+generate_fibonacci(1000)
+|> pick_even_numbers
+|> find_sum
+----
+Reading the above function calls feels like reading the steps in a cooking recipe. If this example doesn't convince you, consider the following example from Ecto that validates user input on various conditions before saving the data in the database.
+
+[source,elixir]
+----
+customer
+|> cast(attrs, [:email, :password])
+|> validate_required([:email, :password])
+|> unique_constraint(:email)
+|> validate_format(:email, ~r/@/)
+|> validate_length(:password, min: 6, max: 100)
+|> put_hashed_password()
+|> Repo.insert()
+----
+
+Since we have not yet covered Ecto, let me translate this code in layman's term.
+
+[source,elixir]
+----
+customer
+|> allow_only_email_and_password_field_in_user_input
+|> check_if_email_and_password_are_set
+|> check_if_email_does_exist_already
+|> check_if_email_matches_regex_pattern
+|> check_password_length_with_range
+|> replace_the_plain_password_with_a_hashed_password
+|> insert_into_database
+----
+
+Imagine writing this long set of nested operations without pipe operator. Not only is it difficult to read, it's difficult to conceive writing it in first place.
+
+To summarize, the pipe operator helps us transform calls such as `function2(function1())`  to `function1() |> function2()`.

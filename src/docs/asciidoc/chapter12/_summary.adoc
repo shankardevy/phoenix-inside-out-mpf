@@ -1,0 +1,12 @@
+== Summary
+In this final chapter, we learned everything it takes to deploy a Phoenix app successfully on an Ubuntu server. We looked into three types of deployment:
+
+1. Mix
+2. Distillery Release
+3. Distillery Release with Docker
+
+Using Mix to deploy a Phoenix app seems to be the simplest but requires us to install Elixir, Erlang and Nodejs on the server as with our development server. This requirement together with the issue of starting and stopping the server constitutes the main drawbacks of this method.
+
+We then learned about performing a Distillery release and how it's different from the Mix deployment method. We learned how _to run database migrations_ in a Distillery release as Mix tasks are not available in them. We also learned _how to use systemctl_ to automatically start our application if the physical host server restarts.
+
+Lastly, since Distillery release files can only be run on a system with similar architecture as that of the build system, we learned how _to use a Docker Ubuntu image to build our release files when using a macOS system_ for development. This enables us to deploy the release files on an Ubuntu machine without issues.

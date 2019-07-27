@@ -1,0 +1,43 @@
+=== Struct
+Our `Catalog` module is currently  listing the products as a List of String data.
+`Catalog` is limited from expressing complex product information such as the product name, price and so on by the use of the String data type. Instead of using String data, we could make use of the Map structure.
+
+Instead of this
+```elixir
+def list_products do
+  ["Tomato", "Apple", "Potato"]
+end
+```
+
+We could write
+```elixir
+def list_products do
+  [%{id: 1, name: "Tomato", price: 44},
+   %{id: 2, name: "Apple", price: 22},
+   %{id: 3, name: "Potato", price: 35}]
+end
+```
+
+However, nothing prevents us from having a typo in our product map. So instead of `%{name: "Potato"}`, we could have a typo `%{*naem*: "Potato"}` and this error goes unnoticed until run time, when a call to the `name` key throws an exception.
+
+To avoid this, we need a data type that gives a compile time guarantee. We need it to catch errors during compile time or to put it another way _if the code compiles it works_.
+
+Struct comes to the rescue for this situation. Structs are defined inside a module and take the name of the module in which they are defined. Let's create a new module at `lib/learn_phoenix/product.ex` with the following content.
+
+```elixir
+defmodule Catalog.Product do
+  defstruct [:id, :name, :price]
+end
+```
+
+Now back in our catalog module, we can replace the maps with structs
+
+```elixir
+def list_products do
+  [%Catalog.Product{id: 1, name: "Tomato", price: 44},
+   %Catalog.Product{id: 2, name: "Apple", price: 22},
+   %Catalog.Product{id: 3, name: "Potato", price: 35}]
+end
+```
+
+If we have a typo in the keys such as `%Catalog.Product{naem: "Potato"}`, we will get an error right at the time of compilation helping us catch bugs and prevent them from creeping into production code.

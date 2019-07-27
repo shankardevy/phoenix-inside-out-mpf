@@ -1,0 +1,146 @@
+== Order schema
+
+Traditionally an `orders` table works in conjunction with a `line_items` table.
+The `orders` table would store information such as order state, customer id and total while the `line_items` table would store the products ordered.
+Since an order can contain multiple products, this relationship is typically modeled as `order has many line_items` and `line_item belongs to order`.
+
+Due to excellent support for `array` columns in Ecto, we can treat a column in the `orders` table as a virtual line_items table storing all line_item details belonging to an order as an array of maps.
+If that sounds complex just bear with me and it will be easier to understand when we work out the details.
+
+The minimal fields that we need in the `orders` table for our tasks at hand are
+
+[cols="2*", options="header"]
+|===
+|Column name
+|Type
+|id
+|Primary key
+
+|status
+|String
+
+|total
+|Decimal
+
+|line_items
+|Array of maps
+|===
+
+We need more columns in our `orders` table such as for `customer_id` and `address`. We will add them in the next chapter when we tackle the Checkout process.
+Again, we are sticking to the XP principle of adding only the simplest code that will do our job.
+
+As discussed earlier, we will use a mix task to generate this table and the schema together.
+Before, we do that we also need to think of the context in which this schema will live.
+In Chapter 4, we created the Product schema in the _Catalog_ context.
+An order doesn't belong to this context. We will create a new _Sales_ context for this purpose.
+
+On our terminal, use the mix task `phx.gen.schema` to create the table and schema as follows:
+
+```bash
+→ mix phx.gen.schema Sales.Order orders status:string total:decimal line_items:array:map
+* creating lib/mango/sales/order.ex
+* creating priv/repo/migrations/20170611142428_create_orders.exs
+
+Remember to update your repository by running the migration:
+
+    $ mix ecto.migrate
+```
+
+The above command creates a migration file and a schema file with the field definitions.
+Open up the generated migration file to confirm the generated commands are in fact as expected.
+
+
+[source,elixir]
+.priv/repo/migrations/2017061142428_create_orders.exs https://gist.github.com/shankardevy/639f5f884a064f2d995d076de6c50795[Link]
+----
+defmodule Mango.Repo.Migrations.CreateOrders do
+  use Ecto.Migration
+
+  def change do
+    create table(:orders) do
+      add :status, :string
+      add :total, :decimal
+      add :line_items, {:array, :map}
+
+      timestamps()
+    end
+
+  end
+end
+----
+
+Open `lib/mango/sales/order.ex` to look at the generated schema file.
+
+[source,elixir]
+.lib/mango/sales/order.ex https://gist.github.com/shankardevy/f667df4835735621b92ef66058059b23[Link]
+----
+defmodule Mango.Sales.Order do
+  use Ecto.Schema
+  import Ecto.Changeset
+  alias Mango.Sales.Order
+
+
+  schema "orders" do
+    field :line_items, {:array, :map}
+    field :status, :string
+    field :total, :decimal
+
+    timestamps()
+  end
+
+  @doc false
+  def changeset(%Order{} = order, attrs) do
+    order
+    |> cast(attrs, [:status, :total, :line_items])
+    |> validate_required([:status, :total, :line_items])
+  end
+end
+----
+The migration file contains the `line_items` field whose type is an array containing map values. This is represented by the Tuple `{:array, :map}` in the schema block. Though we can continue storing our line item data in this field as it is, we will get better support for validation if we use an embedded schema.
+
+Create a new file `lib/mango/sales/line_item.ex` with the below content:
+
+[source,elixir]
+.lib/mango/sales/line_item.ex https://gist.github.com/shankardevy/b082368530f5e469a95d9dd4a168c9d1[Link]
+----
+defmodule Mango.Sales.LineItem do
+  use Ecto.Schema
+
+  embedded_schema do
+    field :product_id, :integer
+    field :product_name, :string
+    field :pack_size, :string
+    field :quantity, :integer
+    field :unit_price, :decimal
+    field :total, :decimal
+  end
+end
+----
+
+The `embedded_schema` in the above code creates a `LineItem` struct just like our `Product` struct, but unlike the `Product` struct, the data in the `LineItem` struct is retrieved and stored as part of another schema.
+We will now modify the `Order` schema to store this embedded_schema.
+
+.lib/mango/sales/order.ex https://gist.github.com/shankardevy/bfbba0cab59eca0c01ca0f103224246b#file-order-ex-L11[Link]
+```elixir
+defmodule Mango.Sales.Order do
+  use Ecto.Schema
+  import Ecto.Changeset
+  alias Mango.Sales.{Order, LineItem} <1>
+
+
+  schema "orders" do
+    field :status, :string
+    field :total, :decimal
+    embeds_many :line_items, LineItem, on_replace: :delete <2>
+
+    timestamps()
+  end
+
+  (...)
+end
+```
+<1> Add an alias
+<2> Change the `field` definition to `embeds_many`
+
+With the above change, the array field type `line_items` will now store multiple `LineItem` struct data.
+Ecto will take care of storing the data in the database as a `jsonb` value. Upon retrieval it will convert the `jsonb` values back to `LineItem` structs without any overhead.

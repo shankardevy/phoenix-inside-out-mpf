@@ -1,0 +1,9 @@
+= Kickstarting Mango
+
+include::_discovery.adoc[]
+
+include::_brunch.adoc[]
+
+include::_hound.adoc[]
+
+include::_summary.adoc[]

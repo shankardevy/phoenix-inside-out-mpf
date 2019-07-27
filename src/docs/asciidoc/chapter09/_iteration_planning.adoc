@@ -1,0 +1,15 @@
+== Iteration Planning
+
+In this chapter, we will cover the following user stories
+
+* As an admin, I want to manage users with administrative access.
+* As an admin, I want to see a distinct layout on the admin dashboard
+* As an admin, I want to login to the admin dashboard with a magic link
+
+As mentioned in the last chapter, we will explore a case for CRUD generator in this chapter to appreciate its benefits. The user story for managing the admin users is a perfect case for CRUD generators, as the generated code needs no modification and perfectly suits our needs.
+
+We will learn how Phoenix handles layout configurations and how we can modify them. This will enable us to provide a distinct admin layout which is different from the layout seen by the customers on the frontend.
+
+To implement a magic login link, we will learn how built-in Phoenix Token works. Issuing secure tokens and validating them is made very simple in Phoenix. Later when we work on Phoenix channels, we will use the same token method for authenticating users on Phoenix channels.
+
+Finally, we will also cover user stories for viewing orders and customers. Since these user stories can be implemented with the existing knowledge we have gained so far, these are given as exercises for you to complete. If you get struck or would like to validate your solution, you can always refer to the Mango source code on GitHub which has implementations for these user stories.

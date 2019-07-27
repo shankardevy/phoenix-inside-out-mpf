@@ -1,0 +1,11 @@
+= Getting Started
+
+include::_installation.adoc[]
+
+include::_new-project.adoc[]
+
+include::_structure.adoc[]
+
+include::_control.adoc[]
+
+include::_summary.adoc[]

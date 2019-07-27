@@ -1,0 +1,3 @@
+= {book-title}
+
+(C) {revyear} {author}. All rights reserved. Version {revnumber}.

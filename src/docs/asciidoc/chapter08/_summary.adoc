@@ -1,0 +1,4 @@
+== Summary
+We started this chapter with an exercise that can be completed with the knowledge that we have gained so far. We then continued to learn how to use the Mix task `phx.gen.html` to generate a full CRUD resource. We were required to heavily modified the generated resource to suit our requirements and ended up modifying almost all the code that got generated. The lesson learned is basically when NOT to use `phx.gen.html` and why we haven't used it so far.
+
+We also learned how to translate interface text into multiple languages by using Gettext library.

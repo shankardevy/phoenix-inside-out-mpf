@@ -1,0 +1,87 @@
+== Seed Data
+
+Phoenix comes with a simple `priv/repo/seeds.exs` file with comments on how to use it.
+
+Basically, any valid Elixir code can be put in the `seeds.exs` file and run using `mix run priv/seeds.exs`. If we modify the file with the following contents, it will insert two products when it's run.
+
+[source,elixir]
+.priv/repo/seeds.exs
+----
+alias Mango.Repo
+alias Mango.Catalog.Product
+Repo.insert %Product{name: "Tomato", price: 50, is_seasonal: false, category: "vegetables"}
+Repo.insert %Product{name: "Apple", price: 100, is_seasonal: true, category: "fruits"}
+----
+
+Instead of doing this, we will use a CSV where each line represents a product. We will loop over the data, parsing and inserting each product.
+
+Similar to what we did earlier in Chapter 2, we will again use the Nimble CSV library for parsing the file.
+
+Open `mix.exs` file and add `nimble_csv` as dependency.
+
+
+[source,elixir]
+.mix.exs
+----
+defp deps do
+  [
+    (...)
+    {:hound, "~> 1.0"},
+    {:nimble_csv, "~> 0.1.0"} <1>
+  ]
+end
+----
+<1> Add `nimble_csv` as dependency.
+
+Run `mix deps.get` to download the new dependencies.
+
+Copy the CSV file `product_list.csv` bundled with the book code to `priv/seed_data/product_list.csv` and add the following code to `seeds.exs`.
+The code again is similar to what we did in Chapter 2, except that it calls our `Repo.insert` function for each item.
+
+[source,elixir]
+.priv/repo/seeds.exs https://gist.github.com/shankardevy/147f010aef3b023c4cf42071056b8dcc[Link]
+----
+alias NimbleCSV.RFC4180, as: CSV
+alias Mango.Catalog.Product
+alias Mango.Repo
+
+"priv/seed_data/product_list.csv"
+|> File.read!
+|> CSV.parse_string
+|> Enum.each(fn [_, name, price, sku, is_seasonal, image, pack_size, category] ->
+     is_seasonal = String.to_existing_atom(is_seasonal) <1>
+     price = Decimal.new(price) <2>
+     %Product{name: name, price: price, sku: sku, is_seasonal: is_seasonal, image: image, pack_size: pack_size, category: category}
+     |> Repo.insert
+end)
+----
+<1> Convert string value such as "true" or "false" to boolean data type. Since `true` and `false` boolean values are Elixir atoms, we convert it to atoms.
+<2> Convert string value such as "12.5" to Decimal data type.
+
+[NOTE]
+====
+User input strings should not be converted to Atom dynamically to avoid atom table blow up as explained in Chapter 2.
+However, in this case, we are using `to_existing_atom/1` which is safe because it doesn't create new atoms but only converts a string to an existing atom. Boolean `true` and `false` are Elixir atoms that already exists.
+
+If for some reason, our CSV file contains other strings instead of `"true"` or `"false"`, we will get an `ArgumentError` during run time.
+====
+
+Now run
+```
+mix run priv/repo/seeds.exs
+```
+
+to populate our database. Back in our browser, we should now be seeing a lot more products.
+
+image::images/_seed_data-804c0.png[]
+
+We added a couple of products through IEx shell in the last section. So let's reset the database so that we only have the products created through the seeds file.
+
+Stop any active `iex` shell or `mix phx.server` using the database and run `mix ecto.reset`.
+
+This will
+
+. drop the database
+. recreate database
+. run the migrations and
+. finally run the seed file.

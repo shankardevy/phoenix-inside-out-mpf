@@ -1,0 +1,26 @@
+== Iteration Planning
+In this chapter, we will look into warehouse user stories. We will use CRUD generators to setup Warehouse Item and Supplier resources. Since we have already seen CRUD generators in the previous chapters, the purpose of this chapter is not to learn CRUD but to introduce the idea of multiple sources of fragmented truth and give another example of using context.
+
+Along with this we will also explore an undocumented feature of the Phoenix framework that allows us to customize the CRUD resource generators.
+
+If you haven't completed the exercises in the last chapter, you might want to checkout the branch `chapter9` from https://github.com/shankardevy/mango[Mango Repo] on GitHub and continue this chapter. Stop any running instance of Mango server or IEx session and follow the steps outlined below:
+
+```
+git clone https://github.com/shankardevy/mango.git
+cd mango
+git checkout chapter9
+mix deps.get
+cd assets && npm install && cd ..
+mix ecto.reset
+mix phx.server
+```
+
+Since the exercises in the previous chapter also require a valid admin user to access the admin dashboard, we need to create one in the IEx shell. Run the following command in `iex -S mix` shell to create a user.
+
+```elixir
+%Mango.Administration.User{email: "user@example.com"} |> Mango.Repo.insert
+```
+
+Visit http://localhost:4000/admin/login and use the email id `user@example.com` to login to the site.
+
+Now you are all set to continue your journey in this chapter.

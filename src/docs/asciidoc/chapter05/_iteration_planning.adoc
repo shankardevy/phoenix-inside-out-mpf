@@ -1,0 +1,28 @@
+== Iteration Planning
+
+In this chapter we will cover the following user stories:
+
+As a customer, I want to
+
+* register for an account
+* login to the website
+* logout of the website
+
+Initially, the `Cart` chapter was planned to appear as Chapter 5 since it seemed natural to work on the cart feature as an extension of the product catalog that we did in the last chapter.
+
+However, in terms of complexity and learning curve, the Cart chapter involves more complex concepts.
+The _Register, Login, Logout_ chapter is introduced here instead of the _Cart_ chapter so that we can work our way into concepts such as Ecto's Changeset and Plug with simpler examples. This will allow us to incrementally understand the more complex ideas in the following chapters.
+
+Registration is a typical action required on most websites.
+Normally, the user account details such as email and password are stored separately from the user profile details such as name, phone number and address.
+However, we are going to combine both these data sets together in a single table because
+
+* It's easier to understand the basics with simpler data structure and this is our primary focus in this chapter.
+* In a real application we are most likely to use an external library for user registration so we don't have to learn a full implementation of something that we will surely replace in our real projects.
+
+
+In this chapter, we will learn:
+
+* How to create HTML forms using Phoenix HTML helper functions.
+* How to validate schema structs using Ecto Changesets.
+* The basics of `Plug.Conn` struct.

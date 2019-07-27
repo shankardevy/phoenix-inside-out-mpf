@@ -1,0 +1,13 @@
+= Register, Login, Logout
+
+include::_iteration_planning.adoc[]
+
+include::_registration.adoc[]
+
+include::_login.adoc[]
+
+include::_load_current_user.adoc[]
+
+include::_logout.adoc[]
+
+include::_summary.adoc[]

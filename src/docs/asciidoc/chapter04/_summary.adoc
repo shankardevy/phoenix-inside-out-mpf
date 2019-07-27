@@ -1,0 +1,9 @@
+== Summary
+
+We learned how to organize our code in modules by Context. 
+
+We explored the importance of conn, saw how it gets passed across the entire project, and learnt how to pass variables to our templates.
+
+We created a few acceptance tests for the various modules we have so far. We also saw the use of the `DataCase` to set up the database for our tests.
+
+Finally, we started with a hardcoded list of products and transitioned to using Ecto with a database. Through this process we were able to see the difference between a database table and a schema. We further stretched our knowledge of working with data by setting up seed data, importing data from a CSV file with Nimble, and by using the reset command to drop and recreate the database.

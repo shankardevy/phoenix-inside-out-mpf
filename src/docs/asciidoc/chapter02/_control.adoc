@@ -1,0 +1,95 @@
+== Control Structures
+
+Control structures allow us to execute different logical branches of code based on a condition.
+In Elixir we have two control structures `case` and `cond`.
+
+=== case
+As we saw earlier, Tuples are normally used in functions to annotate the return value. For example, Elixir's built-in function `File.read/1` returns a Tuple `{:ok, file_content}` on success and `{:error, reason}` on failure. If we are using the `File.read/1` function in our program and we need to execute different branches of code based on the return value, `case` is a suitable candidate for this task.
+
+[source,elixir]
+----
+case File.read!(path) do
+  {:ok, file_content} ->
+    do_something_with_content(file_content)
+  {:error, error} ->
+    IO.puts error
+end
+----
+
+The `case` statement uses pattern matching to find the correct branch of code to execute. It checks the value of the expression right after `case` and tries to match the value with the different patterns within the `do ... end` block. The code within the first pattern that matches gets executed.
+
+[source,elixir]
+----
+case some_expression do
+  pattern1 ->
+    # code for pattern 1
+  pattern2 ->
+    # code for pattern 2
+  pattern3 ->
+    # code for pattern 3
+  ...
+end
+----
+
+We can have any number of pattern within the `do..end` block. We can also use `_` operator as a pattern to match any value which is useful for a catchall case.
+
+[source,elixir]
+----
+case some_expression do
+  pattern1 ->
+    # code for pattern 1
+  _ ->
+    # code for any other value
+end
+----
+
+=== cond
+`case` is useful for a single expression which can output multiple patterns. Sometimes we might want to check multiple conditions with different expressions for a single operation. For example, let's take the classic blog post example.
+
+*  A blog post can be edited if the user who tries to edit it is a site admin.
+*  Or if the user is the author of the post being edited.
+*  If both conditions fail, the user should not be allowed to edit the post.
+
+Here we have one operation which checks if the post can be edited or not and we have multiple conditions to determine the answer.
+
+[source,elixir]
+----
+can_edit = cond do
+              is_admin(current_user) -> true
+              is_author(current_user, post) -> true
+              true -> false
+            end
+----
+
+We stack all conditions inside the `do.. end` block and whichever condition returns `true` first gets executed. For this reason, we explicitly set the last condition with the block to `true` so that it gets called when all other conditions return false. In the above code, if the user is neither admin nor author, the last statement gets called which returns the value `false`. The return value of the `cond` statement is now stored in the `can_edit` variable.
+
+=== if and unless
+Elixir also comes with handy `if` and `unless` constructs to check a single condition. `if` works as in any other language. It basically checks for a condition and if the condition returns true, then it executes the code.
+
+[source,elixir]
+----
+if condition_return_truthy_value? do
+  # Execute code here
+end
+----
+
+Internally Elixir converts the above code to a case statement such as this
+
+[source,elixir]
+----
+case condition_return_truthy_value? do
+  x when x in [false, nil] -> nil
+  _ -> # Execute the code
+end
+----
+
+Elixir considers both the boolean `false` and the atom `nil` to be falsy values. Everything else is a truthy value. So in the above transformation of the `if` statement to a `case` statement, Elixir first checks if the expression matches any of the falsy value. If so, then it does nothing. For everything else, it executes the code given in the original `if` block.
+
+The `unless` construct works similar to `if` with the twist that its code block gets executed when the condition returns false.
+
+[source,elixir]
+----
+unless condition_return_falsey_value? do
+  # Execute code here
+end
+----

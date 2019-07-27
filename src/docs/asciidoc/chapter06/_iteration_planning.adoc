@@ -1,0 +1,32 @@
+== Iteration Planning
+
+In this chapter we will cover the following user stories.
+
+As a *customer*, I want to
+
+. Add products to cart
+. View cart
+. Modify cart
+
+When a customer adds a product to the cart, we need to store the selected product and quantity.
+We can create a new database table called `orders` to store this information by individual customers but mark the order status as *Cart* so that store admin doesn't see them yet.
+When the customer completes the checkout process with the selected products, we can change the order status to *Confirmed*.
+
+If we follow the above approach to store the cart information, then the three user stories above translate to
+
+* Save Product selections in the Orders and set its state as "Cart"
+* View Product selections from the Orders with state as "Cart"
+* Modify the Product selections from the Orders with state as "Cart”
+
+Obviously, we need a new business entity `Order` i.e., we need to create a database table and an Ecto Schema for `Order`.
+Additionally, we will introduce a new type of schema called *embedded schema* to store the product information in the cart.
+We will learn the rationale behind this choice when we create the order schema.
+
+Assuming that we have an Order schema, we need a way to create an order in the *Cart* state when the customer first visits the site.
+Subsequently when the customer adds any product to their cart, we need to retrieve the same order and add the product.
+The same applies for viewing the cart or modifying it until the customer makes a checkout.
+
+We have already seen how to use sessions in the previous chapter. In this chapter, we will use that knowledge to store the active cart information in the session data. We will also reuse the knowledge of creating HTML forms that we learned in the previous chapter to create _Add to cart_ forms.
+
+Finally we will add in some fancy AJAX to update our cart asynchronously.
+There is a lot to do, let's get started.

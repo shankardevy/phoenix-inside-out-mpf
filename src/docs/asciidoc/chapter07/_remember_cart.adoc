@@ -1,0 +1,32 @@
+== Remembering the Cart After Sign In
+With the usability issue sorted out, there is one other major issue. The cart information with the product selection is lost during the sign in process .i.e., if I had 5 products in my cart before signing in, I don't see the same 5 products in my cart after signing in. Instead, I get a fresh empty cart.
+
+This is because during the sign in process, we create a new session for the user. Since we store the `cart_id` value for the current user in the session data, this information is lost in the session regeneration process. Our FetchCart plug looks for the `cart_id` in the newly generated session and since it doesn't find one, it creates a new cart for the user, which effectively means the customer has lost the cart item stored before sign in.
+
+Since all that requires to regain access to the cart is getting the `cart_id` back into the session data, we can solve this easily by modifying the SessionController again.
+
+.lib/mango_web/controllers/session_controller.ex
+```elixir
+def create(conn, %{"session" => session_params}) do
+  case CRM.get_customer_by_credentials(session_params) do
+    {:ok, customer} ->
+      cart_id = conn.assigns.cart.id <1>
+      path = get_session(conn, :intending_to_visit) || page_path(conn, :index)
+      conn
+      |> put_session(:customer_id, customer.id)
+      |> put_session(:cart_id, cart_id) <2>
+      |> configure_session(renew: true)
+      |> put_flash(:info, "Welcome back!")
+      |> redirect(to: path)
+    _ ->
+      conn
+      |> put_flash(:error, "Invalid username/password combination")
+      |> render(:new)
+    end
+  end
+end
+```
+<1> Get the `cart_id` of the current cart.
+<2> Add the `cart_id` to the session again so that it's available even after sign in.
+
+With the above change to the session controller, we can now see the same cart before and after sign in.

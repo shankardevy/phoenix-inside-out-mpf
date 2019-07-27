@@ -1,0 +1,8 @@
+== Summary
+In this chapter, we reviewed a use case where using the mix task `phx.gen.html` proves to be useful. We learned how to use `Phoenix.Token`. Specifically how to
+
+* create a secure token
+* validate a secure token
+* validate a secure token with a time limit
+
+Using our knowledge of `Phoenix.Token` we created a magic link login system for the admin dashboard. We then learned how _to change layout templates_ for a group of paths and for a single path using the `Phoenix.Controller.put_layout/2` function. During this process we also learned how to create and use our first _function Plug_ which works similarly to a module Plug by modifying the `conn` struct.

@@ -1,0 +1,289 @@
+== Magic link login
+
+[sidebar]
+.User Story #17
+--
+*As an admin, I want to login using a magic link.*
+
+Specifications:
+ 1. As an admin when I go to `/admin/login`, I should see a form with an email field.
+ 2. Entering a valid admin email, it should generate a one-time login link.
+--
+
+Currently, our admin dashboard is open to public access.
+Since we want the admin dashboard to be secure and not prone to password attacks,
+we will implement a new login method popularly known as magic links or passwordless login.
+
+It works as below:
+
+. The admin user goes to `/admin/login` which asks for the email address of the user.
+. The user enters his email address registered with the system.
+. The system checks if the email id is associated with an admin user. If yes, it generates a special link which is valid for a short time and sends it by email to the email address of the user.
+. The user clicks on the link sent in the email and is automatically logged in.
+
+The workhorse behind the whole magic link feature is the module `Phoenix.Token` which comes with the Phoenix framework. Specifically the `Phoenix.Token.sign` and `Phoenix.Token.verify` functions. Let's open up `iex -S mix` and try these two functions. We will start with `sign/3`.
+
+```elixir
+iex> token = Phoenix.Token.sign("some_really_long_string_which_is_20_chars_or_above", "salt_value", "mysecret")
+"SFMyNTY.g3QAAAACZAAEZGF0YW0AAAAIbXlzZWNyZXRkAAZzaWduZWRuBgBePDv_XAE.GeggWKqJBQjkqWkwd2TgP7g5S67dH1fZ1IiLxurxpEE"
+```
+
+`Phoenix.Token.sign/3` takes in a long string which is 20 chars or above, a salt value and a secret message that needs to be encrypted. It then return a new encoded string that contains the secret message.
+
+To decrypt the token, we need the same long string and the same salt value to get back the original secret message.
+
+Without going into the cryptographic details, Phoenix.Token uses the long string passed in as the first argument as the base secret key and uses the salt value given as the second parameter to create a variation of this secret key. It then uses the secret key to lock (encrypt) the given data and gives back an unintelligible token. We can get back the original data from this token if and only if we enter in the same base secret and salt value.
+
+```elixir
+iex> Phoenix.Token.verify("some_really_long_string_which_is_20_chars_or_above", "salt_value", token)
+{:ok, "mysecret"}
+```
+
+Above in `verify`, we passed in the same base secret and salt for the given token and we got back the original value from the token.
+
+What happens if either the base secret or salt value is different from the original one? Let's try it.
+
+```elixir
+iex> Phoenix.Token.verify("a_different_base_secret", "salt_value", token)
+{:error, :invalid}
+```
+
+```elixir
+iex> Phoenix.Token.verify("some_really_long_string_which_is_20_chars_or_above", "some_other_salt_value", token)
+{:error, :invalid}
+```
+
+In both cases, we got an error tuple, instead of the original data.
+
+We already have a base secret configured for app in `config/config.exs` under the `Endpoint` configuration. We could make use of it instead of manually adding a long secret each time.
+
+```elixir
+iex> token = Phoenix.Token.sign(MangoWeb.Endpoint, "the secret cave", "open sesame - the magical word")
+"SFMyNTY.g3QAAAACZAAEZGF0YW0AAAAeb3BlbiBzZXNhbWUgLSB0aGUgbWFnaWNhbCB3b3JkZAAGc2lnbmVkbgYAJjZJ_1wB.69P4Bm1J7eXM7M90r9fBE1J2e0Ih8qD6dPywG_-Pf60"
+```
+In the above code, we used the `MangoWeb.Endpoint` module instead of giving the base secret. When Phoenix finds a module name such as this, it automatically tries to fetch the secret key base defined in our config file as shown below:
+
+.config/config.exs
+```elixir
+config :mango, MangoWeb.Endpoint,
+  url: [host: "localhost"],
+  secret_key_base: "CSZBrY/gqxDYBRECCl2zJz4Ubw8+5c+taa+gIu+IjG0RCbcZ0i2o3pYaRHip1aKy",
+```
+
+In addition to verifying the token using the base secret and salt, we can also verify the token's validity based on the time elapsed since generating it. This is useful to shorten the life span of the generated token which otherwise would be valid for eternity.
+
+```elixir
+iex> Phoenix.Token.verify(MangoWeb.Endpoint, "the secret cave", token)
+{:ok, "open sesame - the magical word"}
+# Now add a time bound verification in seconds.
+iex> Phoenix.Token.verify(MangoWeb.Endpoint, "the secret cave", token, max_age: 10)
+{:error, :expired}
+```
+
+In the first case, we verified the token without checking for its age and we got back the original message. In the second case, we required that the token should be no more than 10 seconds old. We got back an error because we tried this code after more than 10 secs had elapsed since the token was generated. (If you were too fast in executing the code, you will have to wait 10 secs before trying this code to get the error).
+
+With all of this background knowledge, we can now apply it to create our magic login link. We need three routes for completing the login system.
+
+* `get admin/login` to display a login form with email address field.
+* `post admin/sendlink` to process the login form submission. This is where we will generate the token as above and email it to the admin user on valid submission. In our case, instead of emailing the link, we will display it on screen to keep our solution simpler. In a real-world scenario, displaying it on screen defeats the purpose and you might need to securely transmit the login link through email or some messaging system.
+* `get admin/magiclink?token=token` to validate and create a session through valid token.
+
+
+Open `mango_web/router.ex` and add the following routes under the admin scope.
+
+./lib/web/router.ex https://gist.github.com/shankardevy/a241c4817ddaffd5b1a2bbd489cba99a#file-router-ex-L55-L57[Link]
+```elixir
+scope "/admin", MangoWeb.Admin, as: :admin do
+  pipe_through [:browser, :admin]
+
+  resources "/users", UserController
+  get "/login", SessionController, :new
+  post "/sendlink", SessionController, :send_link
+  get "/magiclink", SessionController, :create
+end
+```
+
+Create a new file `mango_web/controllers/admin/session_controller.ex` to add our session controller. Additionally, we will set a new layout for the session path so that we only display the login form without any other layout elements such as navbar. Since this layout is going to be used only for the session controller paths, we will create a function plug and directly plug it into the session controller.
+
+A function plug is similar to a module plug but much simpler. We just need a function that accepts two arguments. The first input needs to be a `%Plug.Conn{}` struct and the second contains options to our plug. The options can be ignored if not needed. The function should return a `conn` struct, either modified or unmodified.
+
+.lib/mango_web/controllers/admin/session_controller.ex https://gist.github.com/shankardevy/8b7981f80f95315ef925b7eb213ee1b6[Link]
+```elixir
+defmodule MangoWeb.Admin.SessionController do
+  use MangoWeb, :controller
+  plug :set_layout
+
+  def new(conn, _params) do
+    conn
+    |> render("new.html")
+  end
+
+  defp set_layout(conn, _) do <1>
+    conn
+    |> put_layout("admin_login.html")
+  end
+end
+```
+<1> Function Plug that changes the layout setting in `conn` struct.
+
+
+.Function Plug
+****
+So far we have seen only a module Plug which requires the functions `init/1` and `call/2` to be defined. We then use this module in our router pipelines to put it to work. Here we are using a simpler way to manipulate the `conn` struct using what is known as a Function Plug.
+
+A function plug is an Elixir function which takes in two arguments. The first one should be a `conn` struct and the second one is an optional configuration. The function should return a `conn` struct. Basically, this is similar to the `call/2` function in the module Plug. In the above code, we have created a similar function Plug `set_layout`.
+
+The line `plug :set_layout` ensures that this function Plug is called before executing any action functions.
+****
+
+
+The above controller defines an action `new` which we will use for displaying the login form. The controller plug also changes the layout to `admin_login.html.eex` which needs to be created.
+
+Create a view as shown below:
+
+.lib/mango_web/views/admin/session_view.ex
+```elixir
+defmodule MangoWeb.Admin.SessionView do
+  use MangoWeb, :view
+end
+```
+
+Create the layout template `admin_login.html.eex` as shown below:
+
+.lib/mango_web/templates/layout/admin_login.html.eex https://gist.github.com/shankardevy/e04f4c91fa343304d1f228e1049161ee[Link]
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="">
+    <meta name="author" content="">
+
+    <title>Hello Mango!</title>
+    <link rel="stylesheet" href="<%= static_path(@conn, "/css/app.css") %>">
+  </head>
+
+  <body>
+    <div class="container">
+      <p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
+      <p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
+      <main role="main">
+        <div class="row">
+          <%= render @view_module, @view_template, assigns %>
+        </div>
+      </main>
+    </div> <!-- /container -->
+    <script src="<%= static_path(@conn, "/js/app.js") %>"></script>
+  </body>
+</html>
+```
+
+Create the login form with just the email field and submit button.
+
+.lib/mango_web/templates/admin/session/new.html.eex https://gist.github.com/shankardevy/b7172ed40bd3ff1c063ac45e4e97d802[Link]
+```html
+<div class="admin-login col-md-4 col-md-offset-4">
+  <%= form_for @conn, admin_session_path(@conn, :send_link), [as: :session], fn f -> %>
+    <div class="form-group">
+      <%= text_input f, :email, placeholder: "Email", class: "form-control" %>
+    </div>
+    <%= submit "Send login link", class: "btn btn-primary pull-right" %>
+  <% end %>
+</div>
+```
+
+With these changes, if we go to http://localhost:4000/admin/login, we see the login form. We now need to add a new action in our session controller to process the login form submission. We are going to do the following:
+
+. Check if there exists a valid admin user for the given email id. We need a function to query the admin user table and give us the user struct.
+. If a user is found, we will create a secret token for the ID of the user returned and generate a login link with this token. Finally we will display this link to the user. As mentioned earlier, in a real-world scenario, this link would be emailed, rather than displayed on screen.
+. If a user is not found for the given email id, we send back an "Authentication error" message.
+
+
+We need a function in our `Administration` context to fetch a user by email. Open the file `lib/mango/administration/administration.ex` and add the following function to fetch a user by email id.
+
+.lib/mango/administration/administration.ex https://gist.github.com/shankardevy/2a9bda47f035f22f7baff78025edfaa3#file-administration-ex-L11-L13[Link]
+```elixir
+def get_admin_by_email(email) do
+  User |> Repo.get_by(email: email)
+end
+```
+
+Now let's use this new function in the session controller to complete the magic link generation process.
+
+.lib/mango_web/controllers/admin/session_controller.ex https://gist.github.com/shankardevy/e7d0bde21d9acb85e2dd17ef8ffd1abc[Link]
+```elixir
+defmodule MangoWeb.Admin.SessionController do
+
+  (...)
+
+  alias Mango.Administration <1>
+
+  def send_link(conn, %{"session" => %{"email" => email}}) do
+   user = Administration.get_admin_by_email(email) <2>
+   conn = case user do
+     nil ->  <3>
+       conn
+       |> put_flash(:error, "Authentication error")
+     user -> <4>
+       link = generate_login_link(conn, user)
+       conn
+       |> put_flash(:info, "Your magic login link is #{link}") <5>
+     end
+    conn |> render("new.html")
+ end
+
+ defp generate_login_link(conn, user) do <6>
+   token = Phoenix.Token.sign(MangoWeb.Endpoint, "user", user.id)
+   admin_session_url(conn, :create, %{token: token})
+ end
+
+end
+```
+<1> Add alias for `Mango.Administration`.
+<2> Fetch user by given email id.
+<3> Display error message if the user is not found.
+<4> Generate a link and display it on screen if the user is found.
+<5> `#{}` inside a string `""` is Elixir's syntax for interpolating a variable inside a string. Elixir automatically converts the variable inside `#{}` to a string data type and interpolates it into the string in the given location.
+<6> Private function that handles the link generation process. It contains the token generation code that we saw earlier in this section.
+
+
+With all of these processes complete, if we enter a valid email id, then we get back a message with a magic login link. We still need to implement the actual login process through this link that validates the token present in the URL and creates a session and finally we need to implement the logout process as well.
+
+The login link generated is of the format http://localhost:4000/magiclink?token=encrypted_token. Let's add a new `create` action on the SessionController to validate the token. If the token is valid, we create a new session, otherwise we return an "Authentication error" message. Additionally, we will set the token validity to be 10mins (600 seconds). So if a users tries to login with an otherwise valid link that is older than 10mins they will still get an authentication error.
+
+The session generation code is the same as what we saw when implementing the customer login feature.
+
+.lib/mango_web/controllers/admin/session_controller.ex https://gist.github.com/shankardevy/67499760b510233ef1cd29a89cfd9e6f[Link]
+```elixir
+defmodule MangoWeb.Admin.SessionController do
+
+  (...)
+
+ def create(conn, %{"token" => token}) do
+   case verify_token(token) do
+      {:ok, user_id} ->
+        user = Administration.get_user!(user_id)
+        conn <2>
+        |> assign(:current_admin, user)
+        |> put_session(:admin_id, user.id)
+        |> configure_session(renew: true)
+        |> put_flash(:info, "Successfully logged in!")
+        |> redirect(to: admin_dashboard_path(conn, :index))
+      {:error, _} ->
+        conn
+        |> put_flash(:error, "Authentication error")
+        |> render(:new)
+    end
+ end
+
+ @max_age 600 # 10 mins
+ defp verify_token(token) do
+   Phoenix.Token.verify(MangoWeb.Endpoint, "user", token, max_age: @max_age) <1>
+ end
+
+end
+```
+<1> We verify the token's age is not more than 10mins.
+<2> We generate the session by setting `admin_id` to the ID of the logged in user.

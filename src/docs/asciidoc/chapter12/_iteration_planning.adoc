@@ -1,0 +1,649 @@
+= Deployment
+
+In this chapter we are going to deploy the shop application that we have developed so far.
+
+When it comes to deploying our Phoenix applications, there are several approaches available. We will cover the following approaches:
+
+1. Use Mix
+2. Use Distillery Release
+3. Use Distillery Release with Docker
+
+The following guide assumes that
+
+* you have an Ubuntu Server (16.04) with root access or a user with unrestricted `sudo` access with permissions to install software on the server.
+* DNS entry for mango.yourdomain.com is already mapped to the IP address of the server.
+* You are able to ssh to the server using `ssh user@mango.yourserver.com` from your terminal.
+
+
+== Use Mix to Deploy
+This is the simplest form of deployment for a Phoenix application. Assuming we are deploying our Phoenix app Mango to an Ubuntu server (16.04) at the url http://mango.yourdomain.com, the following are the steps for deployment:
+
+=== Step 1 - Phoenix Dependencies
+Install the following dependencies on the Ubuntu server
+
+* Erlang
+* Elixir
+* PostgreSQL
+* Nodejs
+* Hex package manager
+
+All these dependencies can be installed using the same instructions we followed in Chapter 1 to setup Phoenix locally.
+
+=== Step 2 - Installing Git (optional)
+Git is optional but it's a very convenient way to get our project code onto the server. Without Git we need to copy the source code from our machine to the server through `scp` or some other file transfer method. Since having the source code on Git is the minimal expected standard these days, we will go ahead and install Git on our server. This enables us to easily pull the source code of Mango from GitHub.
+
+Run the following command on the server to install Git.
+
+```
+sudo apt-get update
+sudo apt-get install git
+```
+
+=== Step 3 - Get a Copy of Mango
+Get a copy of the Phoenix app source code on the server by running the following code:
+
+```
+git clone https://github.com/shankardevy/mango.git
+```
+
+=== Step 4 - Setup Secrets
+Inside the newly created directory, create a new configuration file to store the credentials for the database and other secrets.
+
+```
+cd mango
+nano config/prod.secret.exs
+```
+
+Paste in the following configuration in the new file:
+
+```elixir
+config :mango, MangoWeb.Endpoint,
+  secret_key_base: "qXmARElyUIfgb1dYY2hqlnxKODQ9lKmBibVqDT+w4BXoM6IwWErlour81xv5wqP7"
+
+# Configure your database
+config :mango, Mango.Repo,
+  adapter: Ecto.Adapters.Postgres,
+  username: "postgres",
+  password: "postgres",
+  database: "mango_prod",
+  pool_size: 15
+```
+
+Make sure the database credentials given above are correct. If your server has a different username/password combination, make those changes above.
+
+For the `secret_key_base` value, use the command `mix phx.gen.secret` to generate a random secret.
+
+```
+→ mix phx.gen.secret
+qXmARElyUIfgb1dYY2hqlnxKODQ9lKmBibVqDT+w4BXoM6IwWErlour81xv5wqP7 <1>
+```
+<1> Use this value in `prod.secret.exs` file for configuring the `secret_key_base` value.
+
+=== Step 5 - Run the Database Migrations
+
+```
+MIX_ENV=prod mix ecto.create
+MIX_ENV=prod mix ecto.migrate
+MIX_ENV=prod mix run priv/repo/seeds.exs
+```
+
+We could also run `mix ecto.reset` instead of the above individual tasks.
+
+=== Step 6 - Run the Server in Prod Mode
+With all those setup, it's now time to run the server. Run the server using
+
+```
+sudo MIX_ENV=prod mix phx.server
+```
+
+Now visit http://mango.yourdomain.com and you should be able to see the site with all the products listed on the homepage.
+
+
+=== Step 7 - Run the Server as Daemon
+
+In the previous step, we already started our server and our website is now accessible. However, the moment we quit the terminal running the server command, our server stops running and our website is no longer accessible. To avoid this, we need to start the server as a daemon which will continue running the server even after we terminate our SSH connection to the server.
+
+```
+sudo MIX_ENV=prod elixir --detached -S mix phx.server
+```
+
+The above command is slightly different from the previous command we ran to start the Phoenix server. Instead of calling the Mix task directly, we prefix it with `elixir --detached` which effectively converts the command following it into a daemon process that runs in the background.
+
+=== Drawbacks of Using Mix
+
+* We have to install Elixir, Erlang and Nodejs on the server to deploy our application. However, these are not necessary if we use Erlang releases to deploy our application.
+* If two different applications on the server depends on different version of Elixir, then we have to do a few work arounds to manage the different versions of Elixir on the same machine by using package managers such as https://github.com/asdf-vm/asdf[asdf].
+* Finally, if we want to restart our detached app, there is not a graceful way to stop and restart the application. Also if the host server restarts, our application will not start after the host server comes back online, unless we start it again manually using the command shown above.
+
+We are going to resolve all these drawbacks in the following sections by using Erlang releases for our deployment. Deploying via Erlang releases is going to be slightly more complicated than the process we just saw, mainly because of several new concepts that we will need to learn. However, using Erlang releases for deploying provides several benefits that outweigh the additional efforts needed.
+
+== Deploying with Erlang Releases
+
+=== What is an Erlang Release?
+An Erlang release is a setup of self contained files for your app bundled with the ERTS (Erlang Runtime System) so that the app can be run without installing either the Elixir or Erlang language on the target machine. The Distillery library in Elixir takes care of building these release files and packages them into a single tar file that we can conveniently copy onto the remote server where we want to run our application.
+
+=== What we will be doing?
+At a high level, here is what we will be doing to deploy an app using release files.
+
+. Add and Configure Distillery
+. Minor Code Modifications (since we are running on Phoenix master)
+. Configuring the App Secrets
+. Setting Up Static Files
+. Create Release Files
+. Transfer Release Files to a Production Server
+. Start Our App on a Production Server
+
+=== Add and Configure Distillery
+
+Open the `mix.exs` file locally and add `distillery` as a dependency.
+
+```elixir
+defp deps do
+  [
+    (...)
+    {:distillery, "~> 1.4"}
+  ]
+end
+```
+
+Run `mix deps.get` to download the new dependencies. Before we build a release file, we need to create a configuration file for Distillery and setup the app secrets for the prod environment.
+
+Run `mix release.init` to create a sample release config file that we can modify when needed.
+
+```
+→ mix release.init
+
+An example config file has been placed in rel/config.exs, review it,
+make edits as needed/desired, and then run `mix release` to build the release
+```
+
+We will not modify the generated `rel/config.exs` file as the default values are good enough for us to proceed. However, let's inspect its contents to understand what is going on. Note especially the code block below:
+
+```elixir
+environment :prod do
+  set include_erts: true
+  set include_src: false
+  set cookie: :"KTjUu*G|buS(&)z^fu,zV59oURJ~GN>B`F(=]:qRo}!@CIc_=M(8D%P!tUlQsHPS"
+end
+```
+
+This code instructs Distillery to do the following for the `prod` environment:
+
+. include ERTS (Erlang Runtime System) together with the compiled BEAM files of our project in the release files.
+. NOT include the source code of our project in the release files.
+. set the cookie value.
+
+The `cookie` referred to here is the Erlang `cookie` value that is used as an authentication token when connecting with multiple nodes in a distributed setup. That is, if deploying our app on 3 virtual machines which need to interconnect, we use the same `cookie` for all three machines. Since we are going to deploy our app only on a single machine, this `cookie` value is not useful for us now. However, it's good to know what it does because it is important as our needs expand.
+
+The next configuration that we need to modify is `config/prod.exs` and `config/prod.secret.exs`.
+
+=== Configuring App Secrets
+
+Change the `Endpoint` configuration in the `config/prod.exs` file as shown below:
+
+```elixir
+config :mango, MangoWeb.Endpoint,
+  load_from_system_env: true,
+  url: [host: "mango.yourdomain.com", port: 80], <1>
+  cache_static_manifest: "priv/static/cache_manifest.json",
+  server: true <2>
+```
+<1> Modify the `host` value to the actual domain name for accessing the app.
+<2> Add this line so that the Cowboy server is started in production.
+
+.Doesn't Cowboy start without this configuration when using `mix phx.server`?
+****
+Behind the scenes the Mix task `phx.server` dynamically changes the Endpoint configuration and sets the `server` value to `true` as we are doing now.
+
+Since we are now using Erlang release files to run our app, we need to set the server value to `true` as we no longer depend on the Mix task for running our app.
+****
+
+Finally, let's look at the contents of `config/prod.secret.exs`.
+
+```elixir
+use Mix.Config
+
+config :mango, MangoWeb.Endpoint,
+  secret_key_base: "a long string"
+
+config :mango, Mango.Repo,
+  adapter: Ecto.Adapters.Postgres,
+  username: "postgres",
+  password: "postgres",
+  database: "mango_prod",
+  pool_size: 15
+```
+
+This file is ignored in `.gitignore` file and is not under version control to avoid leaking sensitive information publicly. The file currently stores two sensitive pieces of information
+
+. `secret_key_base` - which Phoenix uses to encrypt and decrypt session cookies and to generate tokens as we saw in the Magic Login Link in Chapter 8.
+. PostgreSQL database credentials.
+
+Instead of supplying these details in the development machine where we are generating the release, we can supply this information as environment variables on the production system. So let's delete this file from our local machine and modify `config/prod.exs` to add the following code
+
+
+```elixir
+config :mango, MangoWeb.Endpoint,
+  secret_key_base: System.get_env("SECRET_KEY_BASE")
+
+config :mango, Mango.Repo,
+  adapter: Ecto.Adapters.Postgres,
+  pool_size: 15
+```
+
+Most *importantly* remove the line `import_config "prod.secret.exs"` from `config/prod.exs` because we just deleted this file. With this configuration in place, we are ready to generate our release files.
+
+=== Setting Up Static Files
+
+We have been using Brunch on our development machine to watch changes to our static files such as CSS and JS files and copy them to the `priv/static` folder. On the production machine, we will not have Brunch to deliver these files to the `priv/static` folder. So before we create our release, we need to
+
+. Generate production version of our asset files and copy them to `priv/static`
+. Create compressed versions of these generated files suitable for deployment.
+
+From within our project's `assets` directory, run the following command
+
+```
+./node_modules/.bin/brunch b -p
+```
+
+This populates `priv/static` directory with production version of the static files.
+
+Next, run
+
+```
+MIX_ENV=prod mix phx.digest
+```
+
+to generate gzipped version of the static files and a cache manifest file.
+
+The `cache_manifest.json` file generated by `phx.digest` deserves some explanation as it does interesting work behind the scenes. The content of the file is shown below
+
+.Sample extract from `cache_manifest.json`
+```js
+{
+  "version":1,
+  "latest": {
+      "css/app.css":"css/app-85c76079eef96244b4c31c7fecfb7e22.css",
+      "js/app.js":"js/app-42825cacf468fbd616044f007471b83b.js",
+      "product_images/Banana.jpeg":"product_images/Banana-ce6caaf5c9f5b6964c3318736a758d84.jpeg",
+      (...)
+  }
+  "digests": {
+    "css/app-85c76079eef96244b4c31c7fecfb7e22.css":{
+      "size":154388,
+      "mtime":63665941872,
+      "logical_path":"css/app.css",
+      "digest":"85c76079eef96244b4c31c7fecfb7e22"
+    },
+    (...)
+  }
+}
+```
+
+As seen above, `cache_manifest.json` maps the asset file names such as `css/app.css` to the file names of the digest version and also contains various details about the digest version such as its size and modification time. Phoenix uses this information to generate links to the static files within our template. Our layout file has the following code
+
+```html
+<link rel="stylesheet" href="<%= static_path(@conn, "/css/app.css") %>">
+```
+Phoenix uses the above digest information present in the `cache_manifest.json` to generate a link to the digest version of `app.css`. The end result is that we get the HTML output as below:
+
+```html
+<link rel="stylesheet" href="/css/app-85c76079eef96244b4c31c7fecfb7e22.css?vsn=d">
+```
+
+Notice the link to `app.css` is now referring to the digest version of the css file.
+
+.What is the use of this digest?
+****
+The asset digest is a clever way of forcing the browser to reload the css files (or other static files) when they change. If we were to just put `app.css` in the HTML, any subsequent change to this file (through newer deployments) would not be immediately visible to the users as the browser would continue to use the old cached version of `app.css`.  However, if we use the digest version, we get unique file names for each version of `app.css`. So the browser can cache the file as long as we don't have a new version. When we do have a newer version the browser is able to recognize the change and update the view; effectively forcing the browser to download the file instead of loading the cached version.
+****
+
+Finally let's modify our Endpoint module at `lib/mango_web/endpoint.ex` to serve gzipped versions of static files.
+
+```elixir
+plug Plug.Static,
+  at: "/", from: :mango, gzip: true, <1>
+  only: ~w(css fonts images product_images js favicon.ico robots.txt)
+```
+<1> Change `gzip` value to `true`.
+
+
+=== Create Release Files
+With all these preparations done, we are now good to go for generating the release files.
+
+Run
+
+```
+MIX_ENV=prod mix release --env=prod
+```
+
+Note the use of `prod` twice. The first use is refers to the Mix environment while the last one is the release environment.
+
+Distillery documentation explains in detail why we need to use `prod` twice in the above command.
+
+""
+The Mix environments and release environments represent two distinct concepts, though they appear to be the same.
+
+
+the Mix environment is used during compilation to determine what dependencies to fetch/build, it can be used to compile modules differently based on environment, and it determines what configuration to use. In some cases this aligns perfectly with your deployment environments, but not always. For example, you may build with MIX_ENV=prod for both production and staging environments, but want different release configurations for each of them.
+""
+-- https://hexdocs.pm/distillery/common-issues.html#why-do-i-have-to-set-both-mix_env-and-env[Distillery Docs]
+
+This command takes awhile to compile all the files. Upon successful completion it generates the following output:
+
+```
+Generated mango app
+==> Assembling release..
+==> Building release mango:0.0.1 using environment prod
+==> Including ERTS 8.2 from /usr/local/Cellar/erlang/19.2/lib/erlang/erts-8.2
+==> Packaging release..
+==> Release successfully built!
+    You can run it in one of the following ways:
+      Interactive: _build/prod/rel/mango/bin/mango console
+      Foreground: _build/prod/rel/mango/bin/mango foreground
+      Daemon: _build/prod/rel/mango/bin/mango start
+```
+
+Take time to browse through the files generated at `_build/prod/rel/mango`. These are the files that we need to copy to the remote server for deploying our app. The folder contains all the compiled BEAM files and contains a few shell scripts for running our app.
+
+Distillery also gives a single compressed tar file containing all files needed for our deployment. This is convenient as we can just copy this single file to the remote server and extract it there. The compressed file present at `_build/prod/rel/mango/releases/0.0.1/mango.tar.gz`, where `0.0.1` represents the current version of our app as defined in `mix.exs` file
+
+.mix.exs file extract highlighting the version number
+```elixir
+defmodule Mango.Mixfile do
+  use Mix.Project
+
+  def project do
+    [app: :mango,
+     version: "0.0.1",
+     (...)
+     ]
+  end
+  (...)
+end
+```
+
+
+=== Generating Release Files on macOS
+The above release works only if the development system where the release is created has the same operating system and architecture as the production system. If our development machine is macOS and the production server is running on Ubuntu, the release file created on macOS will not run on the production server.
+
+In the case where our system OS and architecture don't match, we can follow the same steps as previously outlined with the exception of generating the release file. When we have a miss match in the OS/architecture of our development machine and server, we will use a Docker container running a linux distro to build the release file. The rest of the steps outlined work exactly the same.
+
+If you haven't installed docker, download Docker for macOS from https://docs.docker.com/docker-for-mac/install/ and install it.
+
+Create a new file `Dockerfile.build` on our project folder with the following contents
+
+```
+FROM elixir:1.4.0
+
+# Install hex
+RUN /usr/local/bin/mix local.hex --force && \
+    /usr/local/bin/mix local.rebar --force && \
+    /usr/local/bin/mix hex.info
+
+WORKDIR /app
+COPY . .
+
+RUN mix deps.get
+```
+The above file builds a Docker container with Elixir 1.4 installed. We copy the contents of our current folder i.e., our project files into `/app` inside the Docker container and run `mix deps.get`.
+
+To actually build a Docker image with the above specification, run the following command:
+
+```
+docker build --tag=build-mango -f Dockerfile.build .
+```
+
+We create a new Docker image named `build-mango` using the specifications mentioned in `Dockerfile.build`.
+
+Finally, we run the `mix release` command on the Docker image. Though the release is being built inside the Docker container, we want the output to be available on our host machine macOS. To do this, we attach the volume `_build` folder of our current directory to the `app/_build` folder inside the Docker image. This way Docker writes to the volume accessible by the host machine. Because we need the Docker image to write to a folder in the host machine, we need to set our folder permission for the `_build` directory to be liberal.
+
+```
+# Set folder permission
+chmod -R 777 _build
+
+# Create release
+docker run --rm -e MIX_ENV=prod -v $PWD/_build:/app/_build build-mango mix release --env=prod
+```
+
+The above command generates the release and puts it inside the `_build` folder of our project. We can now copy this file to the remote server running on Ubuntu and it will work because the release is created inside the Docker image running on Linux.
+
+=== Transfer Release Files to Production Server
+Copy the release tar file to the production server using any file transfer method. We will use `scp` as it's easy and convenient to do from the terminal.
+
+```
+scp _build/prod/rel/mango/releases/0.0.1/mango.tar.gz deployer@server:/home/deployer
+```
+
+Login to the server and extract the files
+
+```
+ssh deployer@server
+cd /home/deployer
+tar zxvf mango.tar.gz
+```
+
+=== Start Our App on the Production Server
+
+From inside the extracted directory run the following commands to start our app. We need to provide the various required values as environment variables through `export`.
+
+```
+export PORT=4001 <1>
+export DATABASE_URL=ecto://postgres:postgres@localhost/mango_prod <2>
+export SECRET_KEY_BASE=NvfW9LM1Xv9F3OqHxAb7Yo6InV4sdmOgSZWYggMnqU3j0EARHhI/zCeB8Ryf5TON <3>
+
+./bin/mango start
+```
+<1> PORT number on which Cowboy server listens for requests.
+<2> Provide the database credentials in URL format `ecto://username:password@host/database_name`. Ensure the database already exists and is accessible with the credentials given.
+<3> Use `mix phx.gen.secret` to generate a random string and use it as `SECRET_KEY_BASE`.
+
+
+Access http://0.0.0.0:4001 (replace 0.0.0.0 with actual IP address) or http://yourhostname:4001` on your browser and we get this error:
+
+```
+Internal server error
+```
+
+This is because we haven't run our database migrations. While we have the database accessible, we haven't yet created the necessary tables in it.
+
+That should be simple. Can we run the migration using `mix ecto.migrate`?
+
+No. `mix` is a command line tool that comes with installing the Elixir language. On the production server we only have the file with the ERTS; not an installation of Elixir. Also, `mix` requires the source code of the `mix.exs` files to perform many of its jobs and we don't have that on the production server either. With the `mix` option ruled out, we need a way to run the migrations manually. Luckily, Ecto gives us an API to for this purpose.
+
+Run the following command to connect to an IEx console connected to the running application:
+
+```
+./bin/mango remote_console
+```
+
+And run the following code.
+```elixir
+migrations_path = Path.join([:code.priv_dir(:mango), "repo", "migrations"]) <1>
+Ecto.Migrator.run(Mango.Repo, migrations_path, :up, all: true) <2>
+```
+<1> We store the location of the migration files in the `migrations_path`
+<2> We call `Ecto.Migrator.run` to execute the migrations on our database.
+
+Access http://0.0.0.0:4001 again and we should now see our app, although there are no products displayed.
+
+To stop the server, we need to run the following command:
+
+```
+./bin/mango stop
+```
+
+That's a long journey to deploy our app. We still have a few pain points to address, specifically we need:
+
+. A better way to run the migrations and seed data
+. Access our app without any port number in the url (i.e., access on port 80)
+. To handle the scenario where our host server restarts and we need to have our app running automatically.
+
+We will address these one by one.
+
+== Handle Database Migrations and Seed Data
+Create a new file at `lib/release_tasks.ex` with the following content:
+
+```elixir
+defmodule Mango.ReleaseTasks do
+  # Modify below with app name and Repo name
+  @app :mango
+  @repo Mango.Repo
+
+  # Do not modify anything from here:
+  @start_apps [
+    :postgrex,
+    :ecto
+  ]
+
+  def migrate do
+    IO.puts "Loading mango.."
+    # Load the code for mango, but don't start it
+    :ok = Application.load(@app)
+
+    IO.puts "Starting dependencies.."
+    # Start apps necessary for executing migrations
+    Enum.each(@start_apps, &Application.ensure_all_started/1)
+
+    # Start the Repo for mango
+    IO.puts "Starting repos.."
+    Mango.Repo.start_link(pool_size: 1)
+
+    # Run migrations
+    Ecto.Migrator.run(@repo, migrations_path(@app), :up, all: true)
+
+    # Signal shutdown
+    IO.puts "Success!"
+    :init.stop()
+  end
+
+  defp migrations_path(app) do
+    Path.join([:code.priv_dir(@app), "repo", "migrations"])
+  end
+end
+```
+The above file is a slightly modified version of what is found on the https://github.com/bitwalker/distillery/blob/master/docs/Running%20Migrations.md[official documentation] of Distillery
+
+This is the same functionality as what we did in the IEx shell but wrapped in a nicely named module.
+
+Now we need a way to call the function defined in this module easily on the production server. We have already used a Distillery shell command to start our application using `bin/mango start`. Ideally, we could have another command such as `bin/mango migrate` to migrate all the database changes. Conveniently, Distillery allows us to create arbitrary commands like this by simply writing the steps to handle the task. We will do exactly that now.
+
+Create a new shell script at `rel/commands/migrate.sh` with the following contents
+
+```bash
+#!/bin/sh
+
+bin/mango command Elixir.Mango.ReleaseTasks migrate
+```
+
+Edit the `rel/config.exs` and modify the existing `release` code block as shown below:
+
+```elixir
+release :mango do
+  set version: current_version(:mango)
+  set applications: [
+    :runtime_tools
+  ]
+  set commands: [
+    "migrate": "rel/commands/migrate.sh"
+  ]
+end
+```
+
+If we now make a fresh Distillery release and copy the release files to the server we can run the new commands
+
+```
+./bin/mango migrate
+```
+
+As an exercise, you can write a new command to run the `seed.exs` file on the production server. Seed data should be imported if we run the following command  on the server:
+
+```
+./bin/mango seed
+```
+
+== Serving Our App on Port 80
+
+We could change the PORT number to `80` when starting our application. However, only one site can be accessed at port 80 by this method. The alternative is to use a web server such as Nginx to handle multiple sites on port 80 and have it proxy the request to individual Phoenix apps running on different ports. We will see how to configure Nginx to serve our app.
+
+=== Installing Nginx
+
+```
+sudo apt-get update
+sudo apt-get install nginx
+```
+
+Create a new file at `/etc/nginx/sites-enabled/mango.conf` with the following content
+
+```
+upstream mango {
+  server 127.0.0.1:4001 max_fails=5 fail_timeout=60s; <1>
+}
+
+server {
+  server_name mango.yourdomain.com; <2>
+  listen 80;
+
+  location / {
+    allow all;
+
+    # Proxy Headers
+    proxy_http_version 1.1;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Cluster-Client-Ip $remote_addr;
+
+    # The Important Websocket Bits!
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+
+    proxy_pass http://mango;
+  }
+}
+```
+<1> Use the same PORT number on which our app is running.
+<2> Change the `server_name` to desired domain name.
+
+Restart Nginx using the command:
+
+```
+sudo systemctl nginx restart
+```
+
+Now access the site using the domain name configured. In the example above, the site is available at http://mango.yourdomain.com.
+
+== Managing Host Restarts
+We have done everything needed for running our app. But, if the host system restarts our app will not run automatically. Currently if the host restarts we need to login to the server and start the app manually. Ubuntu 16.04 comes with `systemd` service which takes care of the services that need to be started automatically when the system boot up. We will configure `systemd` letting it know how to start and stop our app and then configure it to start the app automatically.
+
+
+Create a new file at `/etc/systemd/system/mango.service` with the following content:
+
+```
+[Unit]
+Description=Mango Shop
+After=network.target
+
+[Service]
+Type=simple
+User=deployer
+Group=deployer
+WorkingDirectory=/home/deployer/mango
+ExecStart=/home/deployer/mango/bin/mango start
+ExecStop=/home/deployer/mango/bin/mango stop
+Restart=on-failure
+Type=forking
+RestartSec=5
+Environment=LANG=en_US.UTF-8
+Environment=PORT=4001
+Environment=DATABASE_URL=ecto://postgres:postgres@localhost/mango_prod
+Environment=SECRET_KEY_BASE=NvfW9LM1Xv9F3OqHxAb7Yo6InV4sdmOgSZWYggMnqU3j0EARHhI/zCeB8Ryf5TON
+SyslogIdentifier=mango
+
+[Install]
+WantedBy=multi-user.target
+```
+Notice that we have moved all our environment variables to this file because during a system restart, `systemctl` needs to know both the environment variables and the command to start the application.
+
+Run `systemctl daemon-reload` after creating the file to let `systemctl` recognize the new service.
+
+Finally run `systemctl enable mango.service` to start the service now and to run it on system restart.

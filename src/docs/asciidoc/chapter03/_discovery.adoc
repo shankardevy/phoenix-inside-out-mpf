@@ -1,0 +1,67 @@
+With this chapter we have reached the crux of the book.
+From here on, we will work on developing an ecommerce portal using some of the best practices from http://www.extremeprogramming.org/rules.html[Extreme Programming]. Over time I have fallen in love with these techniques. If you aren't following these practices at work, perhaps you should consider giving it a shot.
+However, to follow along in this book, you don't need to know anything about Extreme Programming practices.
+
+The entire development of the ecommerce store is driven by user stories.
+In this section we will briefly see the list of user stories that we will cover in the rest of the book.
+Implementation details of each of these user stories will be covered in the individual chapters that deal with it.
+
+Each chapter has an *Iteration Planning* section where we will discuss the scope of the work and implementation ideas relevant to the user stories for that chapter.
+
+Following the Extreme Programming principle, we will build small features that are immediately usable rather than generating a partially working CRUD (Create, Read, Update Delete) interfaces which most often implements bits and pieces of several user stories.
+
+== Project Discovery
+As with developing any typical project, let's start with a project discovery note.
+
+=== Project background
+
+The ecommerce store that we will build is for a fictional brick and mortar shop _Mango_ in the city of Auroville.
+The shop sells fresh vegetables and fruits to its customers directly sourced from nearby farms.
+Due to popular demand to reduce the carbon footprint, Mango has decided to open an online store for its customers.
+However, the management still wants to continue operating the physical shop for customers who prefer to visit the shop in person.
+Also the online store only accepts orders from residents of Auroville and delivers to only locations inside Auroville.
+
+=== User stories
+
+As a *customer*, I want to
+
+1. See seasonal products
+2. Browse products by category
+3. Register for an account
+4. Login to my account
+5. Logout out of my account
+6. Add products to cart
+7. View cart
+8. Update cart
+9. AJAX cart update
+10. Login during checkout if not already logged in
+11. Checkout products in cart
+12. See my order history (Exercise)
+13. Manage support tickets
+14. Browse the website in either English, French or German
+
+As an *admin*, I want to
+
+. Manage users with admin rights
+. See a different layout for the admin dashboard
+. Use magic link to login .i.e., passwordless login
+. See orders (Exercise)
+. See customers (Exercise)
+. Manage warehouse items
+. Manage suppliers
+. Use channel-powered MBot (Mango Robot) to
+.. Get notified by chat when a customer orders on the web
+.. Get order status by chat messages
+.. Create POS orders through chat window.
+
+
+=== A context for Phoenix `Context`
+
+Developing a blog app or a simple Twitter clone to understand Phoenix is a good start but to fully appreciate the benefits of increased complexities introduced by Phoenix `Context` since version 1.3, we need to develop something that is much bigger than a few CRUD operations. Our completed app will contain the following contexts.
+
+. Catalog
+. CRM
+. Sales
+. Warehouse
+. Administration
+. External API

@@ -1,0 +1,15 @@
+== Summary
+
+That was quite a journey we made in this Chapter.
+
+We jumped right into Elixir and got to learn how to use the Interactive IEx Shell. We played with it to understand how it works with various common data types and operators. The Struct is the commonly used datatype when it comes to representing business entities in Phoenix.
+
+We learnt how to write modules and functions in Elixir, learned about function arity and how to use the built-in documentation available in IEx.
+
+We saw how the Pipe Operator helps us solve problem in a natural, incremental way that matches our thought process. In addition we also understood the Match (`=`) & Ignore (`_`) operators.
+
+We moved onto control structures, learned about the `mix` command, and then looked at various common patterns like `use`, `import` and `alias`
+
+We looked at the basics of OTP processes, supervisors, workers and observer. Finally we got to know how to add external dependencies to our projects and tried an example.
+
+Overall, we got to know the very important aspects, concepts, and processes of Elixir. We are now ready for our practical implementation of an ecommerce site in the subsequent chapters.

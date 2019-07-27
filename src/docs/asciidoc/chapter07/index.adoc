@@ -1,0 +1,13 @@
+= Checkout
+
+include::_iteration_planning.adoc[]
+
+include::_require_authenticate.adoc[]
+
+include::_remember_redirect.adoc[]
+
+// include::_remember_cart.adoc[]
+
+include::_checkout.adoc[]
+
+include::_summary.adoc[]

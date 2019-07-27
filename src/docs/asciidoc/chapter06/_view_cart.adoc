@@ -1,0 +1,198 @@
+== View cart
+
+
+[sidebar]
+.User Story #7
+--
+*As a customer, I want to view my cart.*
+
+Specifications:
+
+* Display the list of items in my cart in a table.
+* Display the order total
+* Add a cart link to the navbar
+* The cart link should also display the total number of cart items
+--
+
+
+=== View Cart
+Let's start with creating a new route in `router.ex` file to view the cart.
+[source,elixir]
+.lib/mango_web/router.ex https://gist.github.com/shankardevy/77b7b4a0d167cfca414bc8c6f92b176e#file-router-ex-L32[Link]
+----
+scope "/", MangoWeb do
+  (...)
+
+  get "/cart", CartController, :show <1>
+end
+----
+<1> `GET` request `/cart` is now handled by `CartController.show/2`
+
+
+Add a new function for the `show` action in the `CartController.`
+
+[source,elixir]
+.lib/mango_web/controllers/cart_controller.ex https://gist.github.com/shankardevy/18f23aae6e5bad38e8286c66d5f685f3#file-cart_controller-ex-L22-L25[Link]
+----
+defmodule MangoWeb.CartController do
+  use MangoWeb, :controller
+  alias Mango.Sales
+
+  (...)
+  def show(conn, _params) do
+    cart = conn.assigns.cart
+    render conn, "show.html", cart: cart
+  end
+end
+----
+
+We render the `show.html` template passing in the `cart` variable.
+
+Create a `CartView` module as shown below:
+
+.lib/mango_web/views/cart_view.ex https://gist.github.com/shankardevy/291f11f5cb43e483147982e2ea6e0b54[Link]
+```elixir
+defmodule MangoWeb.CartView do
+  use MangoWeb, :view
+end
+```
+
+Finally we create a new template `show.html.eex` with the following code.
+
+[source,elixir]
+.lib/mango_web/templates/cart/show.html.eex https://gist.github.com/shankardevy/ac103cca81f72bab9755134cc2af0ea2[Link]
+----
+<h1>Cart</h1>
+<%= if Enum.empty?(@cart.line_items) do %>
+  <p>Your cart is empty</p>
+<% else %>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Product name</th>
+        <th>Pack size</th>
+        <th>Quantity</th>
+        <th>Unit Price</th>
+        <th>Subtotal</th>
+      </tr>
+    </thead>
+    <tbody>
+    <%= for item <-  @cart.line_items do %>
+      <tr>
+        <td><%= item.product_name %></td>
+        <td><%= item.pack_size %></td>
+        <td><%= item.quantity %></td>
+        <td>INR <%= item.unit_price %></td>
+        <td>INR <%= item.total %></td>
+      </tr>
+    <% end %>
+    <tr>
+      <td colspan=4>Order Total</td>
+      <td>INR <%= @cart.total %></td>
+    </tr>
+    </tbody>
+  </table>
+<% end %>
+----
+
+
+=== Add link to view cart
+
+In order to add a link to view cart in the navbar, open up `app_nav.html.eex` file inside `lib/mango_web/templates/layout` and add the following code.
+
+.lib/mango_web/templates/layout/app_nav.html.eex https://gist.github.com/shankardevy/f40d520b1b3a82b1541be02f68a27185#file-app_nav-html-eex-L20[Link]
+```elixir
+<ul class="nav navbar-nav navbar-right">
+  <li><%= link "Cart", to: cart_path(@conn, :show), class: "cart nav-link" %></li>
+  (...)
+</ul>
+```
+
+To display the cart count, we need to get access to the current cart data.
+Since our plug `FetchCart` stores the current cart in the `conn` struct, we can retrieve it easily on our templates by accessing `@conn.assigns.cart`.
+We will need to do a little scripting to calculate the total items in the cart. This type of scritping is a bit messy to do inside our template file. Instead, let's move it all to a function inside `CartView`.
+
+.lib/mango_web/views/cart_view.ex https://gist.github.com/shankardevy/f01f002463a13b96b7cc2d5cec015bd1[Link]
+```elixir
+defmodule MangoWeb.CartView do
+  use MangoWeb, :view
+  alias Mango.Sales.Order
+
+  def cart_count(conn = %Plug.Conn{}) do
+    cart_count(conn.assigns.cart)
+  end
+
+  def cart_count(cart = %Order{}) do
+    Enum.reduce(cart.line_items, 0, fn(item, acc) ->
+      acc + item.quantity
+    end)
+  end
+end
+```
+
+We define two functions, both named `cart_count` but accepting different data types.
+When the `cart_count/1` is called by passing a `conn` struct, it fetches the `cart` assigned in it and calls `cart_count/1` with the cart data.
+But this time the second function head matches which loops through each item in the cart's lineitems and finds the total items using `Enum.reduce/3`.
+
+Finally let's make use of this function in our navigation partial.
+
+.lib/mango_web/templates/layout/app_nav.html.eex
+```elixir
+<ul class="nav navbar-nav navbar-right">
+  <li><%= link "Cart(#{MangoWeb.CartView.cart_count(@conn)})", to: cart_path(@conn, :show), class: "cart nav-link" %></li>
+</ul>
+```
+Argh! That's looking pretty long and difficult to read. We can do better.
+
+Open up `layout_view.ex` and import the function from `CartView` as below:
+
+.lib/mango_web/views/layout_view.ex https://gist.github.com/shankardevy/204bc1558a82fb3065a946ba0f7a0b12[Link]
+```elixir
+defmodule MangoWeb.LayoutView do
+  use MangoWeb, :view
+  import MangoWeb.CartView, only: [cart_count: 1]
+end
+```
+Now back in `app_nav.html.eex` template, we can remove the module name prefix.
+
+.lib/mango_web/templates/layout/app_nav.html.eex
+```elixir
+<ul class="nav navbar-nav navbar-right">
+  <li><%= link "Cart(#{cart_count(@conn)})", to: cart_path(@conn, :show), class: "cart nav-link" %></li>
+</ul>
+```
+
+That looks better. If the count is 5 it now displays a link with text "Cart(5)". What if we want to display a cart icon instead of the text?
+
+The code needs to be modified as
+
+```elixir
+<li><%= link raw("<i class=\"fa fa-shopping-cart\" aria-hidden=\"true\"></i> <span class=\"cart-count\">#{cart_count(@conn)}</span>"), to: cart_path(@conn, :show), class: "cart nav-link" %></li>
+```
+
+Look at those additional calls to the `raw/1` function and all those escaped double quotes. Even if we replace the inner double quotes with single quotes, it is still a big complex EEx expression.
+
+Again, we can do better. Open up `layout_view.ex` and add this new function.
+
+.lib/mango_web/views/layout_view.ex https://gist.github.com/shankardevy/b9d6407707c18520bb9fdb48714bd3b9[Link]
+```elixir
+defmodule MangoWeb.LayoutView do
+  use MangoWeb, :view
+  import MangoWeb.CartView, only: [cart_count: 1]
+
+  def cart_link_text(conn) do
+    raw """
+    <i class="fa fa-shopping-cart"></i> <span class="cart-count">#{cart_count(conn)}</span>
+    """
+  end
+end
+```
+
+The code for the cart link in our `app_nav.html.eex` can now be simplified as below:
+
+.lib/mango_web/templates/layout/app_nav.html.eex https://gist.github.com/shankardevy/fc9e3b7b6ab32103b2fc3ed41a7dc1a5#file-app_nav-html-eex-L20[Link]
+```elixir
+<ul class="nav navbar-nav navbar-right">
+  <li><%= link cart_link_text(@conn), to: cart_path(@conn, :show), class: "cart nav-link" %></li>
+</ul>
+```
